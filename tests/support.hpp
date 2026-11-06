@@ -48,6 +48,7 @@ public:
             / ("updater-test-" + std::to_string(stamp) + "-" + std::to_string(sequence++));
         if (!std::filesystem::create_directory(root)) throw std::runtime_error("test directory exists");
     }
+
     ~Directory() { std::error_code ec; std::filesystem::remove_all(root, ec); }
     Directory(const Directory&) = delete;
     Directory& operator=(const Directory&) = delete;

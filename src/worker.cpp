@@ -1,12 +1,17 @@
 #include "updater/worker.hpp"
 
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
 #include <algorithm>
 #include <condition_variable>
 #include <deque>
+#include <format>
 #include <limits>
 #include <mutex>
 #include <stdexcept>
 #include <thread>
+#endif
 
 namespace updater {
 namespace {
@@ -20,12 +25,17 @@ enum class Phase { queued, preparing, persisting, finished };
 class AdmissionLease {
 public:
     explicit AdmissionLease(std::shared_ptr<Capacity> capacity) : capacity_(std::move(capacity)) {}
+
     ~AdmissionLease() {
         if (reserved) {
             std::lock_guard lock(capacity_->mutex);
             --capacity_->unfinished;
         }
     }
+
+    AdmissionLease(const AdmissionLease&) = delete;
+    AdmissionLease& operator=(const AdmissionLease&) = delete;
+
     bool reserved = false; // Set exactly once before admission becomes visible.
 private:
     std::shared_ptr<Capacity> capacity_;
@@ -82,6 +92,7 @@ struct RequestWorker::Impl {
     void run() noexcept
     {
         try {
+            if (!factory) throw std::invalid_argument("missing processor factory");
             auto created = factory();
             factory = nullptr;
             if (!created) throw std::runtime_error(created.error());
@@ -98,8 +109,8 @@ struct RequestWorker::Impl {
                 state.last_progress = clocks.monotonic();
             }
             changed.notify_all();
-            std::int64_t maintenance_day = -1;
-            bool more_maintenance = false;
+            auto maintenance_day = std::chrono::sys_days::min();
+            bool maintenance_pending = false;
             auto next_maintenance = MonoTime::min();
             std::ptrdiff_t since_maintenance = 0;
             for (;;) {
@@ -120,8 +131,8 @@ struct RequestWorker::Impl {
                         candidate.reset();
                         state.phase = "activation";
                     } else {
-                        const auto day = clocks.wall().time_since_epoch().count() / 86400;
-                        if ((more_maintenance || day > maintenance_day) && clocks.monotonic() >= next_maintenance
+                        const auto day = std::chrono::floor<std::chrono::days>(clocks.wall());
+                        if ((maintenance_pending || day > maintenance_day) && clocks.monotonic() >= next_maintenance
                             && (queue.empty() || since_maintenance >= 100)) {
                             maintenance = true;
                             state.phase = "maintenance";
@@ -152,9 +163,10 @@ struct RequestWorker::Impl {
                     }
                     activation->port(activated ? Result<std::string>(revision) : std::unexpected(activated.error()));
                 } else if (maintenance) {
-                    auto maintained = processor->maintain(clocks.wall(), options.retention);
-                    more_maintenance = maintained && *maintained;
-                    maintenance_day = clocks.wall().time_since_epoch().count() / 86400;
+                    const auto observed_at = clocks.wall();
+                    const auto maintained = processor->maintain(observed_at, options.retention);
+                    maintenance_pending = !maintained || *maintained;
+                    maintenance_day = std::chrono::floor<std::chrono::days>(observed_at);
                     next_maintenance = clocks.monotonic() + (maintained ? std::chrono::seconds(1) : std::chrono::minutes(1));
                     since_maintenance = 0;
                     std::lock_guard lock(capacity->mutex);
@@ -184,8 +196,8 @@ struct RequestWorker::Impl {
                         state.last_progress = clocks.monotonic();
                         ++state.completed;
                         if (reply.category == "log" || reply.category == "census" || reply.category == "feed")
-                            state.error = "check " + std::to_string(job->context.sequence) + ": "
-                                + reply.category + " " + reply.detail;
+                            state.error = std::format("check {}: {} {}", job->context.sequence,
+                                                      reply.category, reply.detail);
                         last_was_activation = false;
                     }
                     since_maintenance = std::min(since_maintenance + 1, std::ptrdiff_t{100});
@@ -219,6 +231,7 @@ struct RequestWorker::Impl {
 
 RequestWorker::RequestWorker(ProcessorFactory factory, WorkerOptions options, Clocks clocks)
     : impl_(std::make_unique<Impl>(std::move(factory), options, std::move(clocks))) {}
+
 RequestWorker::~RequestWorker() { begin_shutdown(); }
 
 Result<void> RequestWorker::wait_ready(std::chrono::milliseconds timeout)

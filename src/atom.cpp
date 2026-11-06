@@ -5,6 +5,9 @@
 #include <libxml/xmlwriter.h>
 #include <libxml/parser.h>
 
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
 #include <algorithm>
 #include <format>
 #include <map>
@@ -12,6 +15,7 @@
 #include <mutex>
 #include <set>
 #include <tuple>
+#endif
 
 namespace updater {
 namespace {
@@ -37,6 +41,7 @@ struct Sink {
             return -1;
         }
     }
+
     static int close(void*) noexcept { return 0; }
 };
 
@@ -57,17 +62,21 @@ public:
     }
 
     void start(const char* name) { check(xmlTextWriterStartElement(writer_.get(), chars(name))); }
+
     void end() { check(xmlTextWriterEndElement(writer_.get())); }
+
     void attribute(const char* name, std::string_view value)
     {
         const auto owned = checked(value);
         check(xmlTextWriterWriteAttribute(writer_.get(), chars(name), chars(owned.c_str())));
     }
+
     void element(const char* name, std::string_view value)
     {
         const auto owned = checked(value);
         check(xmlTextWriterWriteElement(writer_.get(), chars(name), chars(owned.c_str())));
     }
+
     void extension(const Extension& extension)
     {
         if (!xml::valid_local_name(extension.name)) throw WriterError{};
@@ -75,12 +84,15 @@ public:
         check(xmlTextWriterWriteElementNS(writer_.get(), chars("ext"), chars(extension.name.c_str()),
                                          chars(extension.namespace_uri.c_str()), chars(value.c_str())));
     }
+
     void finish() { check(xmlTextWriterEndDocument(writer_.get())); }
 
 private:
     std::unique_ptr<xmlTextWriter, decltype(&xmlFreeTextWriter)> writer_{nullptr, xmlFreeTextWriter};
     static const xmlChar* chars(const char* text) { return reinterpret_cast<const xmlChar*>(text); }
+
     static void check(int status) { if (status < 0) throw WriterError{}; }
+
     static std::string checked(std::string_view value)
     {
         if (!xml::valid_text(value)) throw WriterError{};
@@ -215,7 +227,7 @@ Result<void> preflight_feeds(const Catalog& catalog, const FeedOptions& options)
     empty.suites.emplace("validation", Suite{"", {}});
     if (auto checked = render(empty, {nil_uuid, "validation"}, options, true); !checked)
         return std::unexpected(checked.error());
-    for (const auto& [suite, unused] : catalog.suites)
+    for (const auto& suite : catalog.suites.keys())
         if (auto checked = render(catalog, {nil_uuid, suite}, options, true); !checked)
             return std::unexpected("suite '" + suite + "': " + checked.error());
     return {};

@@ -45,6 +45,13 @@ executables to the matching `lib64` directory. The optimized preset keeps
 Ubuntu's fortification and linker hardening settings. A production install
 needs a compatible C++ runtime on its target host.
 
+Use the `linux-gcc-modules` preset for all three CMake and CTest commands
+above to build with `import std;`. This opt-in preset uses the experimental
+module support in staging's CMake 4.2 and has its own build directory.
+In module builds, implementation files import `std` after project and
+dependency headers. Includes that supply macros such as `errno` stay in
+place. IntelliSense and the other presets read the ordinary headers.
+
 Run `shared-updater-server --version` to read the version, build status and
 configuration, UTC build date, full Git commit, checkout state, and exact tag
 embedded in the executable. An exact tag supplies the version label. Untagged

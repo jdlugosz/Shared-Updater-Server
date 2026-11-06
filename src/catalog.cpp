@@ -4,15 +4,21 @@
 
 #include <toml++/toml.hpp>
 
-#include <algorithm>
 #include <arpa/inet.h>
+
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
+#include <algorithm>
 #include <charconv>
 #include <fstream>
 #include <format>
 #include <initializer_list>
 #include <map>
+#include <ranges>
 #include <string_view>
 #include <utility>
+#endif
 
 namespace updater {
 namespace {
@@ -26,8 +32,11 @@ constexpr auto xml_namespace = "http://www.w3.org/XML/1998/namespace"sv;
 constexpr auto xmlns_namespace = "http://www.w3.org/2000/xmlns/"sv;
 
 bool digit(char c) { return c >= '0' && c <= '9'; }
+
 bool lower(char c) { return c >= 'a' && c <= 'z'; }
+
 bool alpha(char c) { return lower(c) || (c >= 'A' && c <= 'Z'); }
+
 bool alnum(char c) { return alpha(c) || digit(c); }
 
 bool identifier(std::string_view text, bool suite)
@@ -44,7 +53,7 @@ bool media_type(std::string_view type)
     const auto slash = type.find('/');
     const auto token = [](std::string_view part) {
         return !part.empty() && std::ranges::all_of(part, [](char c) {
-            return alnum(c) || c == 0x60 || "!#$%&'*+-.^_|~"sv.find(c) != std::string_view::npos;
+            return alnum(c) || c == '`' || "!#$%&'*+-.^_|~"sv.contains(c);
         });
     };
     return slash != type.npos && token(type.substr(0, slash)) && token(type.substr(slash + 1));
@@ -139,7 +148,7 @@ void Loader::report(DiagnosticKind kind, SourceLocation location, std::string me
 void Loader::keys(const toml::table& table, std::initializer_list<std::string_view> allowed)
 {
     for (const auto& [key, value] : table) {
-        if (std::ranges::find(allowed, key.str()) == allowed.end())
+        if (!std::ranges::contains(allowed, key.str()))
             report(DiagnosticKind::schema, at(key.source()), "unknown field '" + std::string(key.str()) + "'");
     }
 }
@@ -223,9 +232,7 @@ std::vector<std::string> Loader::ids(const toml::node& node, std::string_view fi
         auto name = id(value, field);
         define(unique, name, true, value, "'" + name + "' in '" + std::string(field) + "'");
     }
-    std::vector<std::string> result;
-    for (const auto& [name, unused] : unique) result.push_back(name);
-    return result;
+    return unique | std::views::keys | std::ranges::to<std::vector>();
 }
 
 template<class Read>
@@ -504,10 +511,9 @@ CatalogLoad Loader::load(std::span<const fs::path> fragments, const CatalogUsage
 
 std::string location_text(const SourceLocation& location)
 {
-    auto text = location.file.empty() ? std::string("catalog") : location.file.string();
-    if (location.line != 0)
-        text += ":" + std::to_string(location.line) + ":" + std::to_string(location.column);
-    return text;
+    auto file = location.file.empty() ? std::string("catalog") : location.file.string();
+    if (location.line != 0) return std::format("{}:{}:{}", file, location.line, location.column);
+    return file;
 }
 
 } // namespace

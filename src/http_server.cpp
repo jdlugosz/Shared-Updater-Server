@@ -7,10 +7,14 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
 #include <atomic>
 #include <format>
-#include <limits>
 #include <map>
+#include <utility>
+#endif
 
 namespace updater {
 namespace net = boost::asio;
@@ -27,7 +31,11 @@ struct HttpServer::Impl : std::enable_shared_from_this<HttpServer::Impl> {
     };
     struct Connection {
         explicit Connection(std::shared_ptr<Connections> state) : state(std::move(state)) { ++this->state->count; }
+
         ~Connection();
+        Connection(const Connection&) = delete;
+        Connection& operator=(const Connection&) = delete;
+
         std::shared_ptr<Connections> state;
     };
     net::io_context& context;
@@ -47,6 +55,7 @@ struct HttpServer::Impl : std::enable_shared_from_this<HttpServer::Impl> {
     Impl(net::io_context& context, RequestWorker& worker, HttpOptions options, HealthProvider health)
         : context(context), worker(worker), options(std::move(options)), health(std::move(health)),
           acceptor(context), retry(context) {}
+
     void accept();
     void remove(std::int64_t id) { live.erase(id); }
     void stop(bool drain);
@@ -77,12 +86,14 @@ struct HttpServer::Impl::Session : std::enable_shared_from_this<HttpServer::Impl
         parser.header_limit(static_cast<std::uint32_t>(options.header_bytes));
         parser.body_limit(0);
     }
+
     void start()
     {
         stream.expires_after(options.read_timeout);
         http::async_read_header(stream, buffer, parser,
             [self = shared_from_this()](Error error, std::size_t) { self->read(error); });
     }
+
     void read(Error error)
     {
         if (state == State::closed) return;
@@ -141,6 +152,7 @@ struct HttpServer::Impl::Session : std::enable_shared_from_this<HttpServer::Impl
                     self->worker.cancel(self->submission->handle, CancelReason::queue_timeout);
         });
     }
+
     void complete(Completion completion)
     {
         if (!submission || completion.sequence != submission->handle.sequence) return;
@@ -150,6 +162,7 @@ struct HttpServer::Impl::Session : std::enable_shared_from_this<HttpServer::Impl
         else if (completion.reply.outcome == Outcome::not_found) send(404, "unknown_suite\n");
         else send(503, "unavailable\n");
     }
+
     void send(unsigned status, std::string body, std::string_view type = "text/plain; charset=utf-8")
     {
         if (state == State::closed || write_pending) return;
@@ -171,6 +184,7 @@ struct HttpServer::Impl::Session : std::enable_shared_from_this<HttpServer::Impl
             self->close();
         });
     }
+
     void close()
     {
         if (state == State::closed) return;
@@ -232,10 +246,10 @@ void HttpServer::Impl::stop(bool drain)
     Error ignored;
     acceptor.close(ignored);
     retry.cancel();
-    std::vector<std::shared_ptr<Session>> sessions;
-    for (const auto& [id, session] : live) sessions.push_back(session);
-    for (const auto& session : sessions)
+    for (auto it = live.begin(); it != live.end();) {
+        const auto session = (it++)->second; // close() erases the current entry.
         if (!drain || session->state == Session::State::reading) session->close();
+    }
 }
 
 HttpServer::HttpServer(net::io_context& context, RequestWorker& worker, HttpOptions options, HealthProvider health)
@@ -248,13 +262,14 @@ HttpServer::HttpServer(net::io_context& context, RequestWorker& worker, HttpOpti
             ready, json_quote(status.revision), status.queued, status.unfinished)};
     };
 }
+
 HttpServer::~HttpServer() { impl_->stop(false); }
 
 Result<std::uint16_t> HttpServer::start()
 {
     const auto& options = impl_->options;
     if (options.maximum_connections <= 0 || options.header_bytes < 128
-        || options.header_bytes > std::numeric_limits<std::uint32_t>::max() || options.target_bytes <= 0
+        || !std::in_range<std::uint32_t>(options.header_bytes) || options.target_bytes <= 0
         || options.read_timeout <= std::chrono::milliseconds::zero()
         || options.write_timeout <= std::chrono::milliseconds::zero())
         return std::unexpected("invalid HTTP limits");
@@ -273,6 +288,7 @@ Result<std::uint16_t> HttpServer::start()
 }
 
 void HttpServer::stop(bool drain) { impl_->stop(drain); }
+
 std::ptrdiff_t HttpServer::sessions() const { return impl_->connections->count; }
 
 } // namespace updater

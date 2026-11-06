@@ -3,34 +3,43 @@
 #include <toml++/toml.hpp>
 #include <boost/asio/ip/address.hpp>
 
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
 #include <charconv>
 #include <algorithm>
+#include <format>
 #include <fstream>
 #include <initializer_list>
 #include <limits>
 #include <stdexcept>
+#include <string_view>
+#endif
 
 namespace updater {
 namespace {
 struct ConfigError : std::runtime_error { using std::runtime_error::runtime_error; };
-[[noreturn]] void invalid(const toml::node& node, std::string message)
+[[noreturn]] void invalid(const toml::node& node, std::string_view message)
 {
-    throw ConfigError(std::to_string(node.source().begin.line) + ":" + std::to_string(node.source().begin.column)
-                      + ": " + std::move(message));
+    const auto begin = node.source().begin;
+    throw ConfigError(std::format("{}:{}: {}", begin.line, begin.column, message));
 }
+
 void keys(const toml::table& table, std::initializer_list<std::string_view> known)
 {
     for (const auto& [key, value] : table)
-        if (std::ranges::find(known, key.str()) == known.end())
+        if (!std::ranges::contains(known, key.str()))
             invalid(value, "unknown configuration key '" + std::string(key.str()) + "'");
 }
+
 std::string string(const toml::node& node)
 {
     const auto value = node.value<std::string>();
-    if (!value || value->empty() || value->find('\0') != std::string::npos)
+    if (!value || value->empty() || value->contains('\0'))
         invalid(node, "expected a nonempty string without NUL");
     return *value;
 }
+
 std::int64_t integer(const toml::node& node, std::int64_t minimum = 1,
                      std::int64_t maximum = std::numeric_limits<std::ptrdiff_t>::max())
 {
@@ -39,6 +48,7 @@ std::int64_t integer(const toml::node& node, std::int64_t minimum = 1,
         invalid(node, "integer is outside its allowed range");
     return number->get();
 }
+
 const toml::table* table(const toml::table& root, std::string_view name)
 {
     const auto* node = root.get(name);
@@ -133,12 +143,12 @@ Result<ServerConfig> read_server_config(const std::filesystem::path& file)
             duration("reload_ms", config.reload_timeout);
             duration("shutdown_ms", config.shutdown_timeout);
         }
-        config.worker.idle_interval = std::max(std::chrono::milliseconds(1),
-            std::min(std::chrono::milliseconds(1000), config.worker_budget / 3));
+        using namespace std::chrono_literals;
+        config.worker.idle_interval = std::clamp(config.worker_budget / 3, 1ms, 1000ms);
         return config;
     } catch (const toml::parse_error& error) {
-        return std::unexpected(file.string() + ":" + std::to_string(error.source().begin.line)
-                               + ": " + std::string(error.description()));
+        return std::unexpected(std::format("{}:{}: {}", file.string(), error.source().begin.line,
+                                           error.description()));
     } catch (const ConfigError& error) {
         return std::unexpected(file.string() + ":" + error.what());
     } catch (const std::filesystem::filesystem_error& error) { return std::unexpected(error.what()); }
@@ -156,7 +166,7 @@ Result<std::unique_ptr<const Catalog>> prepare_catalog(const ServerConfig& confi
     }
     if (auto checked = preflight_feeds(**loaded, config.feed); !checked)
         return std::unexpected(checked.error());
-    for (const auto& [suite, unused] : (*loaded)->suites) {
+    for (const auto& suite : (*loaded)->suites.keys()) {
         const auto line = contact_line({nil_uuid, suite}, WallTime{});
         if (!line || std::ssize(*line) > config.log_bytes)
             return std::unexpected("contact log limit cannot hold a catalog suite's record");

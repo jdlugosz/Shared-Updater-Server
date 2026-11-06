@@ -27,6 +27,9 @@ public:
     HttpServer(boost::asio::io_context& context, RequestWorker& worker,
                HttpOptions options = {}, HealthProvider health = {});
     ~HttpServer();
+    HttpServer(const HttpServer&) = delete;
+    HttpServer& operator=(const HttpServer&) = delete;
+
     [[nodiscard]] Result<std::uint16_t> start();
     void stop(bool drain_responses = true);
     [[nodiscard]] std::ptrdiff_t sessions() const;

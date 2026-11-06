@@ -1,13 +1,18 @@
 #include "updater/persistence.hpp"
 
 #include <cerrno>
-#include <cstring>
 #include <fcntl.h>
-#include <format>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
+#include <cstring>
+#include <format>
 #include <utility>
 #include <algorithm>
+#endif
 
 namespace updater {
 namespace {
@@ -17,10 +22,14 @@ std::string failure(std::string_view operation) { return std::string(operation) 
 class Fd {
 public:
     explicit Fd(int value = -1) : value_(value) {}
+
     ~Fd() { if (value_ >= 0) ::close(value_); }
+
     Fd(const Fd&) = delete;
     Fd& operator=(const Fd&) = delete;
+
     Fd(Fd&& other) noexcept : value_(std::exchange(other.value_, -1)) {}
+
     Fd& operator=(Fd&& other) noexcept {
         if (this != &other) {
             if (value_ >= 0) ::close(value_);
@@ -28,6 +37,7 @@ public:
         }
         return *this;
     }
+
     int get() const { return value_; }
 private:
     int value_;
@@ -49,12 +59,13 @@ Result<void> check_file(int directory, const char* name, std::ptrdiff_t limit, b
 
 Result<std::string> contact_line(const CheckRequest& request, WallTime observed_at)
 {
-    const auto target = "/updchk/" + uuid_string(request.installation_id) + "/" + request.suite;
+    const auto id = uuid_string(request.installation_id);
+    const auto target = "/updchk/" + id + "/" + request.suite;
     const auto validated = parse_check_target(target);
     if (!validated || validated->suite != request.suite || observed_at.time_since_epoch().count() < 0)
         return std::unexpected("invalid contact");
-    return std::format(R"({{"at":"{:%FT%TZ}","id":"{}","suite":"{}"}})",
-                       observed_at, uuid_string(request.installation_id), request.suite) + '\n';
+    return std::format(R"({{"at":"{:%FT%TZ}","id":"{}","suite":"{}"}})" "\n",
+                       observed_at, id, request.suite);
 }
 
 struct RollingContactLog::Impl {
@@ -86,8 +97,7 @@ struct RollingContactLog::Impl {
         size = status.st_size;
         auto offset = size;
         std::array<char, 4096> buffer{};
-        bool found = size == 0;
-        while (offset > 0 && !found) {
+        while (offset > 0) {
             const auto count = std::min(offset, std::ssize(buffer));
             const auto start = offset - count;
             std::ptrdiff_t read = 0;
@@ -98,13 +108,12 @@ struct RollingContactLog::Impl {
                 if (n <= 0) return std::unexpected(failure("read log tail"));
                 read += n;
             }
-            for (auto i = count; i > 0; --i)
-                if (buffer[static_cast<std::size_t>(i - 1)] == '\n') {
-                    offset = start + i;
-                    found = true;
-                    break;
-                }
-            if (!found) offset = start;
+            const std::string_view chunk(buffer.data(), static_cast<std::size_t>(count));
+            if (const auto newline = chunk.rfind('\n'); newline != chunk.npos) {
+                offset = start + static_cast<std::ptrdiff_t>(newline) + 1;
+                break;
+            }
+            offset = start;
         }
         if (offset != size) {
             if (::ftruncate(current.get(), offset) != 0) return std::unexpected(failure("repair log tail"));
@@ -117,6 +126,7 @@ struct RollingContactLog::Impl {
 };
 
 RollingContactLog::RollingContactLog(std::unique_ptr<Impl> impl) : impl_(std::move(impl)) {}
+
 RollingContactLog::~RollingContactLog() = default;
 
 Result<std::unique_ptr<RollingContactLog>> RollingContactLog::open(

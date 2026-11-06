@@ -28,6 +28,15 @@
       }
     },
     {
+      "name": "linux-gcc-modules",
+      "inherits": "linux-gcc",
+      "displayName": "GCC 16.2 / C++26 standard library module",
+      "cacheVariables": {
+        "UPDATER_USE_STD_MODULE": "ON",
+        "CMAKE_EXPERIMENTAL_CXX_IMPORT_STD": "d0edc3af-4c50-42ea-a356-e2862fe7a444"
+      }
+    },
+    {
       "name": "linux-asan",
       "inherits": "linux-gcc",
       "displayName": "GCC 16.2 / address sanitizer",
@@ -53,6 +62,11 @@
       "jobs": 2
     },
     {
+      "name": "linux-gcc-modules",
+      "configurePreset": "linux-gcc-modules",
+      "jobs": 2
+    },
+    {
       "configurePreset": "linux-asan",
       "name": "linux-asan",
       "jobs": 1
@@ -67,6 +81,16 @@
     {
       "name": "linux-gcc",
       "configurePreset": "linux-gcc",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "linux-gcc-modules",
+      "configurePreset": "linux-gcc-modules",
       "output": {
         "outputOnFailure": true
       },

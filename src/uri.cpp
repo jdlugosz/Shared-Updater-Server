@@ -1,23 +1,33 @@
 #include "updater/uri.hpp"
 
-#include <algorithm>
 #include <arpa/inet.h>
+
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
+#include <algorithm>
 #include <charconv>
 #include <string>
+#endif
 
 namespace updater {
 namespace {
 using namespace std::string_view_literals;
 bool digit(char c) { return c >= '0' && c <= '9'; }
+
 bool lower(char c) { return c >= 'a' && c <= 'z'; }
+
 bool alpha(char c) { return lower(c) || (c >= 'A' && c <= 'Z'); }
+
 bool alnum(char c) { return alpha(c) || digit(c); }
+
 int hex_value(char c) {
     if (digit(c)) return c - '0';
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     return -1;
 }
+
 bool host_name(std::string_view host)
 {
     if (host.ends_with('.')) host.remove_suffix(1);
@@ -46,12 +56,14 @@ bool valid_https_url(std::string_view url)
     url.remove_prefix(scheme.size());
     const auto end = url.find_first_of("/?#");
     auto authority = url.substr(0, end);
-    if (authority.empty() || authority.find('@') != authority.npos) return false;
+    if (authority.empty() || authority.contains('@')) return false;
 
     if (authority.starts_with('[')) {
         const auto close = authority.find(']');
         if (close == authority.npos) return false;
-        const std::string ip(authority.substr(1, close - 1));
+        const auto literal = authority.substr(1, close - 1);
+        if (literal.contains('\0')) return false;
+        const std::string ip(literal);
         in6_addr address{};
         if (inet_pton(AF_INET6, ip.c_str(), &address) != 1) return false;
         authority.remove_prefix(close + 1);
@@ -80,7 +92,7 @@ bool valid_https_url(std::string_view url)
         } else if (c == '#') {
             if (fragment) return false;
             fragment = true;
-        } else if (!alnum(c) && "-._~!$&'()*+,;=:@/?"sv.find(c) == url.npos) {
+        } else if (!alnum(c) && !"-._~!$&'()*+,;=:@/?"sv.contains(c)) {
             return false;
         }
     }

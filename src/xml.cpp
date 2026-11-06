@@ -1,9 +1,13 @@
 #include "updater/xml.hpp"
 
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
 #include <algorithm>
 #include <cstddef>
 #include <optional>
 #include <utility>
+#endif
 
 namespace updater::xml {
 namespace {
@@ -77,6 +81,7 @@ bool xml_local_name(std::string_view name)
 } // namespace
 
 bool valid_text(std::string_view text) { return xml_text(text); }
+
 bool valid_local_name(std::string_view name) { return xml_local_name(name); }
 
 } // namespace updater::xml

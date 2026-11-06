@@ -19,8 +19,11 @@ public:
         REQUIRE(sqlite3_open(path.c_str(), &db) == SQLITE_OK);
         exec("PRAGMA foreign_keys=ON");
     }
+
     ~Database() { sqlite3_close(db); }
+
     void exec(const char* sql) { REQUIRE(sqlite3_exec(db, sql, nullptr, nullptr, nullptr) == SQLITE_OK); }
+
     std::int64_t scalar(const char* sql) {
         sqlite3_stmt* statement = nullptr;
         REQUIRE(sqlite3_prepare_v2(db, sql, -1, &statement, nullptr) == SQLITE_OK);
@@ -35,6 +38,7 @@ CheckRequest identified()
 {
     return {*parse_uuid("12345678-1234-4234-8234-1234567890ab"), "launcher"};
 }
+
 std::string read(const std::filesystem::path& path)
 {
     std::ifstream stream(path, std::ios::binary);
@@ -50,6 +54,7 @@ struct Calls {
 class Log final : public ContactSink {
 public:
     explicit Log(Calls& calls) : calls(calls) {}
+
     Result<void> append(const CheckRequest&, WallTime) override {
         calls.events.push_back("log");
         if (calls.fail_log) return std::unexpected("injected");
@@ -60,16 +65,19 @@ public:
 class Census final : public CensusSink {
 public:
     explicit Census(Calls& calls) : calls(calls) {}
+
     Result<void> register_suites(const Catalog&) override {
         calls.events.push_back("register");
         if (calls.fail_register) return std::unexpected("injected");
         return {};
     }
+
     Result<void> record(const CheckRequest&, WallTime) override {
         calls.events.push_back("commit");
         if (calls.fail_record) return std::unexpected("injected");
         return {};
     }
+
     Result<bool> prune(WallTime, const Retention&) override { return false; }
     Calls& calls;
 };

@@ -5,7 +5,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <libxml/parser.h>
 
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
 #include <algorithm>
+#endif
 
 namespace {
 using namespace updater;

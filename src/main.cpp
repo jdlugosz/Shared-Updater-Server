@@ -2,22 +2,25 @@
 #include "updater/service.hpp"
 #include "updater/write_text.hpp"
 
-#include <cstdio>
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
 #include <iostream>
-#include <print>
 #include <stdexcept>
+#endif
 
 int main(int argc, char** argv)
 {
     using namespace updater;
-    std::filesystem::path config_file = "/etc/shared-updater-server/server.toml";
-    bool check_only = false;
-    bool feed_mode = false;
-    bool id_given = false;
-    std::filesystem::path catalog_override;
-    std::string suite;
-    std::string id = uuid_string(nil_uuid);
     try {
+        std::filesystem::path config_file = "/etc/shared-updater-server/server.toml";
+        bool check_only = false;
+        bool feed_mode = false;
+        bool id_given = false;
+        std::filesystem::path catalog_override;
+        std::string suite;
+        std::string id = uuid_string(nil_uuid);
+
         for (int n = 1; n < argc; ++n) {
             const std::string_view argument(argv[n]);
             const auto value = [&]() -> std::string {
@@ -65,7 +68,11 @@ int main(int argc, char** argv)
         }
         return run_service(std::move(*config), std::move(*catalog));
     } catch (const std::exception& error) {
-        std::println(stderr, "Error: {}", error.what());
+        write_text(std::cerr, "Error: ");
+        write_text(std::cerr, error.what()).put('\n');
+        return 1;
+    } catch (...) {
+        write_text(std::cerr, "Error: unexpected exception type\n");
         return 1;
     }
 }

@@ -2,9 +2,14 @@
 
 #include <sqlite3.h>
 
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
+#include <utility>
+#endif
 
 namespace updater {
 namespace {
@@ -14,6 +19,7 @@ void check(sqlite3* db, int code)
 {
     if (code != SQLITE_OK) throw SqlError(sqlite3_errmsg(db));
 }
+
 void exec(sqlite3* db, const char* sql) { check(db, sqlite3_exec(db, sql, nullptr, nullptr, nullptr)); }
 
 class Statement {
@@ -22,24 +28,32 @@ public:
     {
         check(db, sqlite3_prepare_v2(db, sql, -1, &statement_, nullptr));
     }
+
     ~Statement() { sqlite3_finalize(statement_); }
     Statement(const Statement&) = delete;
     Statement& operator=(const Statement&) = delete;
+
     void text(int index, std::string_view value) {
         check(db_, sqlite3_bind_text64(statement_, index, value.data(), value.size(), SQLITE_TRANSIENT, SQLITE_UTF8));
     }
+
     void uuid(int index, const Uuid& value) {
         check(db_, sqlite3_bind_blob(statement_, index, value.data(), static_cast<int>(value.size()), SQLITE_TRANSIENT));
     }
+
     void integer(int index, std::int64_t value) { check(db_, sqlite3_bind_int64(statement_, index, value)); }
+
     bool row() {
         const auto code = sqlite3_step(statement_);
         if (code == SQLITE_ROW) return true;
         if (code != SQLITE_DONE) throw SqlError(sqlite3_errmsg(db_));
         return false;
     }
+
     void run() { if (row()) throw SqlError("unexpected SQL row"); }
+
     std::int64_t integer(int column) const { return sqlite3_column_int64(statement_, column); }
+
     std::string text(int column) const {
         const auto* value = sqlite3_column_text(statement_, column);
         return value ? reinterpret_cast<const char*>(value) : "";
@@ -52,7 +66,12 @@ private:
 class Transaction {
 public:
     explicit Transaction(sqlite3* db) : db_(db) { exec(db_, "BEGIN IMMEDIATE"); }
+
     ~Transaction() { if (!committed_) sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, nullptr); }
+
+    Transaction(const Transaction&) = delete;
+    Transaction& operator=(const Transaction&) = delete;
+
     void commit() { exec(db_, "COMMIT"); committed_ = true; }
 private:
     sqlite3* db_;
@@ -99,13 +118,15 @@ struct SqliteCensus::Impl {
     sqlite3* db = nullptr;
     ~Impl() { if (db) sqlite3_close_v2(db); }
 };
+
 SqliteCensus::SqliteCensus(std::unique_ptr<Impl> impl) : impl_(std::move(impl)) {}
+
 SqliteCensus::~SqliteCensus() = default;
 
 Result<std::unique_ptr<SqliteCensus>> SqliteCensus::open(
     const std::filesystem::path& path, std::chrono::milliseconds busy_timeout)
 {
-    if (busy_timeout.count() < 0 || busy_timeout.count() > std::numeric_limits<int>::max())
+    if (busy_timeout.count() < 0 || !std::in_range<int>(busy_timeout.count()))
         return std::unexpected("invalid SQLite busy timeout");
     auto impl = std::make_unique<Impl>();
     try {
@@ -150,7 +171,7 @@ Result<void> SqliteCensus::register_suites(const Catalog& catalog)
 {
     try {
         Transaction transaction(impl_->db);
-        for (const auto& [id, unused] : catalog.suites) {
+        for (const auto& id : catalog.suites.keys()) {
             Statement statement(impl_->db, "INSERT INTO suite(suite_id) VALUES(?) ON CONFLICT DO NOTHING");
             statement.text(1, id);
             statement.run();
@@ -164,6 +185,7 @@ Result<void> SqliteCensus::record(const CheckRequest& request, WallTime observed
 {
     const auto seconds = observed_at.time_since_epoch().count();
     if (seconds < 0) return std::unexpected("negative census timestamp");
+    const auto utc_day = std::chrono::floor<std::chrono::days>(observed_at).time_since_epoch().count();
     try {
         Transaction transaction(impl_->db);
         if (request.installation_id == nil_uuid) {
@@ -171,7 +193,7 @@ Result<void> SqliteCensus::record(const CheckRequest& request, WallTime observed
 INSERT INTO anonymous_day(suite_id,day_utc,request_count) VALUES(?,?,1)
 ON CONFLICT(suite_id,day_utc) DO UPDATE SET request_count=anonymous_day.request_count+1)");
             count.text(1, request.suite);
-            count.integer(2, seconds / 86400);
+            count.integer(2, utc_day);
             count.run();
         } else {
             Statement installation(impl_->db, R"(
@@ -188,7 +210,7 @@ ON CONFLICT(suite_id,installation_id) DO UPDATE SET
 INSERT INTO installation_day(suite_id,installation_id,day_utc) VALUES(?,?,?) ON CONFLICT DO NOTHING)");
             day.text(1, request.suite);
             day.uuid(2, request.installation_id);
-            day.integer(3, seconds / 86400);
+            day.integer(3, utc_day);
             day.run();
         }
         transaction.commit();
@@ -217,7 +239,7 @@ SELECT suite_id,day_utc FROM anonymous_day WHERE day_utc < ? ORDER BY day_utc,su
             prune.integer(1, keep);
             prune.integer(2, retention.batch);
             prune.run();
-            more |= sqlite3_changes(impl_->db) == retention.batch;
+            more |= sqlite3_changes64(impl_->db) == retention.batch;
         }
         // Remove an inactive pair's remaining days in a bounded batch even when
         // activity retention is longer than the installation inactivity policy.
@@ -229,7 +251,7 @@ DELETE FROM installation_day WHERE (suite_id,installation_id,day_utc) IN (
         inactive_days.integer(1, inactive);
         inactive_days.integer(2, retention.batch);
         inactive_days.run();
-        more |= sqlite3_changes(impl_->db) == retention.batch;
+        more |= sqlite3_changes64(impl_->db) == retention.batch;
         Statement installations(impl_->db, R"(
 DELETE FROM installation WHERE (suite_id,installation_id) IN (
  SELECT i.suite_id,i.installation_id FROM installation AS i WHERE last_seen_s < ?
@@ -238,7 +260,7 @@ DELETE FROM installation WHERE (suite_id,installation_id) IN (
         installations.integer(1, inactive);
         installations.integer(2, retention.batch);
         installations.run();
-        more |= sqlite3_changes(impl_->db) == retention.batch;
+        more |= sqlite3_changes64(impl_->db) == retention.batch;
         transaction.commit();
         return more;
     } catch (const SqlError& error) { return std::unexpected(error.what()); }

@@ -1,13 +1,18 @@
 #include "updater/catalog.hpp"
+#include "updater/uri.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
 #include <algorithm>
 #include <format>
 #include <fstream>
 #include <limits>
 #include <stdexcept>
 #include <string_view>
+#endif
 
 namespace {
 
@@ -586,6 +591,10 @@ TEST_CASE("HTTPS fields accept valid authorities and reject invalid URLs", "[cat
     SECTION("IP literal, port and escaped query") {
         fixture.write("30-build.toml", replaced(build, original, "HTTPS://[2001:db8::1]:8443/a?q=%26#notes"));
         REQUIRE(fixture.load().has_value());
+    }
+    SECTION("embedded NUL inside an IPv6 literal") {
+        using namespace std::string_view_literals;
+        REQUIRE_FALSE(valid_https_url("https://[::1\0ignored]/"sv));
     }
     SECTION("invalid URLs") {
         for (const auto* url : {"/relative", "http://example.invalid", "https:///path",

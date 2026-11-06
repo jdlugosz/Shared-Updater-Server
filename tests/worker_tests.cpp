@@ -3,12 +3,16 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
 #include <barrier>
 #include <condition_variable>
 #include <deque>
 #include <future>
 #include <mutex>
 #include <thread>
+#endif
 
 namespace {
 using namespace updater;
@@ -20,6 +24,7 @@ public:
         { std::lock_guard lock(mutex); messages.push_back(std::move(completion)); }
         changed.notify_all();
     }; }
+
     std::vector<Completion> take(std::size_t count)
     {
         std::unique_lock lock(mutex);
@@ -44,6 +49,8 @@ struct Shared {
     bool release_before = false;
     bool release_after = false;
     bool fail_activation = false;
+    bool fail_first_maintenance = false;
+    int maintenance_calls = 0;
     int active = 0;
     int peak = 0;
     std::string revision = "initial";
@@ -53,6 +60,7 @@ struct Shared {
         { std::lock_guard lock(mutex); release_before = release_after = true; }
         changed.notify_all();
     }
+
     void wait_started(std::size_t count = 1) {
         std::unique_lock lock(mutex);
         REQUIRE(changed.wait_for(lock, 3s, [&] { return started.size() >= count; }));
@@ -62,7 +70,9 @@ struct Shared {
 class ControlledProcessor final : public Processor {
 public:
     explicit ControlledProcessor(std::shared_ptr<Shared> state) : state(std::move(state)) {}
+
     Result<void> initialize() override { return {}; }
+
     Reply process(const CheckRequest&, const RequestContext& context, const std::function<bool()>& gate) override
     {
         {
@@ -86,6 +96,7 @@ public:
         }
         return {persisted ? Outcome::ok : Outcome::unavailable, std::move(revision), persisted ? "" : "cancelled"};
     }
+
     Result<void> activate(std::unique_ptr<const Catalog> candidate) override
     {
         std::lock_guard lock(state->mutex);
@@ -93,7 +104,16 @@ public:
         state->revision = candidate->header.revision;
         return {};
     }
-    Result<bool> maintain(WallTime, const Retention&) override { return false; }
+
+    Result<bool> maintain(WallTime, const Retention&) override
+    {
+        std::lock_guard lock(state->mutex);
+        const bool first = ++state->maintenance_calls == 1;
+        state->changed.notify_all();
+        if (first && state->fail_first_maintenance) return std::unexpected("injected maintenance failure");
+        return false;
+    }
+
     std::string revision() const override { std::lock_guard lock(state->mutex); return state->revision; }
     std::shared_ptr<Shared> state;
 };
@@ -109,7 +129,9 @@ public:
         }, options, std::move(clocks));
         REQUIRE(worker->wait_ready());
     }
+
     ~Fixture() { state->release(); worker->begin_shutdown(); worker.reset(); }
+
     Submission submit() {
         auto submitted = worker->try_submit({nil_uuid, "launcher"}, mailbox.port());
         REQUIRE(submitted);
@@ -271,10 +293,47 @@ TEST_CASE("Worker shutdown removes queued work and wakes an idle thread", "[work
     REQUIRE(fixture.worker->status().unfinished == 0);
 }
 
+TEST_CASE("Worker retries census maintenance on the same UTC day after a failure", "[worker]")
+{
+    std::atomic<std::int64_t> elapsed_ms{};
+    Clocks clocks{[] { return test::published().seconds; },
+                  [&] { return MonoTime{} + std::chrono::milliseconds(elapsed_ms.load()); }};
+    auto state = std::make_shared<Shared>();
+    state->fail_first_maintenance = true;
+    Mailbox mailbox;
+    RequestWorker worker([state]() -> Result<std::unique_ptr<Processor>> {
+        return std::make_unique<ControlledProcessor>(state);
+    }, {.idle_interval = 1ms}, clocks);
+    REQUIRE(worker.wait_ready());
+    {
+        std::unique_lock lock(state->mutex);
+        REQUIRE(state->changed.wait_for(lock, 3s, [&] { return state->maintenance_calls == 1; }));
+    }
+
+    // Completing a check ensures the worker has scheduled the retry before the clock advances.
+    const auto submitted = worker.try_submit({nil_uuid, "launcher"}, mailbox.port());
+    REQUIRE(submitted);
+    REQUIRE(mailbox.take(1).front().reply.outcome == Outcome::ok);
+    elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(1min).count();
+    worker.wake();
+
+    std::unique_lock lock(state->mutex);
+    REQUIRE(state->changed.wait_for(lock, 3s, [&] { return state->maintenance_calls >= 2; }));
+}
+
 TEST_CASE("Worker startup failure is reported and cannot accept work", "[worker]")
 {
-    RequestWorker worker([]() -> Result<std::unique_ptr<Processor>> { return std::unexpected("injected"); });
-    REQUIRE_FALSE(worker.wait_ready());
+    ProcessorFactory factory;
+    std::string_view expected = "missing processor factory";
+    SECTION("empty factory") {}
+    SECTION("factory returns an error") {
+        factory = []() -> Result<std::unique_ptr<Processor>> { return std::unexpected("injected"); };
+        expected = "injected";
+    }
+    RequestWorker worker(std::move(factory));
+    const auto ready = worker.wait_ready();
+    REQUIRE_FALSE(ready);
+    REQUIRE(ready.error() == expected);
     REQUIRE(worker.status().failed);
     REQUIRE(worker.wait_stopped(3s));
 }

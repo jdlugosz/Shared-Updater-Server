@@ -9,12 +9,19 @@
 #include <boost/asio/steady_timer.hpp>
 #include <systemd/sd-daemon.h>
 
-#include <algorithm>
 #include <cerrno>
 #include <csignal>
 #include <cstdio>
-#include <cstdlib>
 #include <fcntl.h>
+#include <sys/file.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
+#include <algorithm>
+#include <cstdlib>
 #include <format>
 #include <future>
 #include <iostream>
@@ -24,9 +31,7 @@
 #include <thread>
 #include <ctime>
 #include <utility>
-#include <sys/file.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#endif
 
 namespace updater {
 namespace {
@@ -58,7 +63,12 @@ public:
             throw std::runtime_error("another daemon owns the state or log directory");
         }
     }
+
     ~DirectoryLock() { if (fd_ >= 0) ::close(fd_); }
+
+    DirectoryLock(const DirectoryLock&) = delete;
+    DirectoryLock& operator=(const DirectoryLock&) = delete;
+
 private:
     int fd_ = -1;
 };
@@ -73,9 +83,10 @@ public:
         std::uint64_t usec{};
         watchdog_ = sd_watchdog_enabled(0, &usec) > 0;
         if (watchdog_)
-            heartbeat_interval_ = std::max(1ms, std::min(5000ms, std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::microseconds(usec / 3))));
+            heartbeat_interval_ = std::clamp(std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::microseconds(usec / 3)), 1ms, 5000ms);
     }
+
     Result<void> start(std::string report)
     {
         auto started = server_.start();
@@ -87,6 +98,7 @@ public:
         schedule_tick();
         return {};
     }
+
     int exit_code() const { return exit_code_; }
 private:
     net::io_context& context_;
@@ -125,6 +137,7 @@ private:
             ready, json_quote(status.revision), json_quote(status.phase), status.queued, status.unfinished,
             status.completed, json_quote(reload_state_), generation_)};
     }
+
     void arm_signal()
     {
         signals_.async_wait([this](Error error, int signal) {
@@ -134,6 +147,7 @@ private:
             } else stop(0);
         });
     }
+
     void request_reload()
     {
         if (reload_busy_) { reload_again_ = true; return; }
@@ -171,6 +185,7 @@ private:
             }
         });
     }
+
     void finish_reload(bool accepted, std::string detail = {})
     {
         reload_busy_ = false;
@@ -184,6 +199,7 @@ private:
                              : "READY=1\nSTATUS=Catalog rejected; previous revision retained");
         if (std::exchange(reload_again_, false) && !stopping_) request_reload();
     }
+
     void collect_loader()
     {
         if (!loaded_.valid() || loaded_.wait_for(0ms) != std::future_status::ready) return;
@@ -200,9 +216,11 @@ private:
         if (!loaded) { finish_reload(false, "Catalog reload rejected: " + loaded.error()); return; }
         auto report = format_success(**loaded);
         const auto generation = generation_;
+        const auto executor = context_.get_executor();
+        // Only the handler on the I/O thread accesses the controller.
         const auto accepted = worker_.offer_candidate(std::move(*loaded),
-            [this, generation, report = std::move(report)](Result<std::string> result) mutable {
-                net::post(context_, [this, generation, report = std::move(report), result = std::move(result)]() mutable {
+            [this, executor, generation, report = std::move(report)](Result<std::string> result) mutable {
+                net::post(executor, [this, generation, report = std::move(report), result = std::move(result)]() mutable {
                     if (stopping_ || generation != generation_) return;
                     finish_reload(result.has_value(),
                         result ? std::move(report) : "Catalog activation rejected: " + result.error());
@@ -210,6 +228,7 @@ private:
             });
         if (!accepted) finish_reload(false, "Catalog activation unavailable");
     }
+
     void stop(int code)
     {
         exit_code_ = std::max(exit_code_, code);
@@ -221,11 +240,13 @@ private:
         worker_.begin_shutdown();
         server_.stop(true);
     }
+
     void schedule_tick()
     {
         tick_.expires_after(100ms);
         tick_.async_wait([this](Error error) { if (!error) tick(); });
     }
+
     void tick()
     {
         collect_loader();
@@ -287,6 +308,8 @@ int run_service(ServerConfig config, std::unique_ptr<const Catalog> catalog)
     std::vector<std::unique_ptr<DirectoryLock>> locks;
     for (const auto& directory : directories) locks.push_back(std::make_unique<DirectoryLock>(directory));
     const auto report = format_success(*catalog);
+    // Worker completions can post during exception unwinding.
+    net::io_context context;
     RequestWorker worker([config, catalog = std::move(catalog)]() mutable -> Result<std::unique_ptr<Processor>> {
         auto log = RollingContactLog::open(config.log_directory, config.log_bytes);
         if (!log) return std::unexpected(log.error());
@@ -296,7 +319,6 @@ int run_service(ServerConfig config, std::unique_ptr<const Catalog> catalog)
                                                std::move(*log), std::move(*census));
     }, config.worker);
     if (auto ready = worker.wait_ready(); !ready) throw std::runtime_error(ready.error());
-    net::io_context context;
     Controller controller(context, worker, config);
     if (auto started = controller.start(report); !started) throw std::runtime_error(started.error());
     context.run();

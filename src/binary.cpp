@@ -1,9 +1,21 @@
 #include "updater/binary.hpp"
 
-#include <cstdint>
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
+#include <stdexcept>
+#endif
 
 namespace updater {
 namespace {
+
+void write_hex_byte(char*& output, std::byte byte) noexcept
+{
+    constexpr std::string_view digits = "0123456789abcdef";
+    const auto value = std::to_integer<unsigned>(byte);
+    *output++ = digits[value >> 4];
+    *output++ = digits[value & 15];
+}
 
 int hex_value(char c)
 {
@@ -58,22 +70,26 @@ std::optional<Sha256> parse_sha256(std::string_view text)
 
 std::string hex_string(std::span<const std::byte> bytes)
 {
-    constexpr std::string_view digits = "0123456789abcdef";
     std::string result;
-    result.reserve(bytes.size() * 2);
-    for (const auto byte : bytes) {
-        const auto value = std::to_integer<unsigned>(byte);
-        result.push_back(digits[value >> 4]);
-        result.push_back(digits[value & 15]);
-    }
+    if (bytes.size() > result.max_size() / 2) throw std::length_error("hex string is too large");
+    result.resize_and_overwrite(bytes.size() * 2, [bytes](char* output, std::size_t size) noexcept {
+        for (const auto byte : bytes) write_hex_byte(output, byte);
+        return size;
+    });
     return result;
 }
 
 std::string uuid_string(const Uuid& id)
 {
-    const auto hex = hex_string(id);
-    return hex.substr(0, 8) + "-" + hex.substr(8, 4) + "-" + hex.substr(12, 4)
-        + "-" + hex.substr(16, 4) + "-" + hex.substr(20);
+    std::string result;
+    result.resize_and_overwrite(36, [&id](char* output, std::size_t size) noexcept {
+        for (std::size_t i = 0; i < id.size(); ++i) {
+            if (i == 4 || i == 6 || i == 8 || i == 10) *output++ = '-';
+            write_hex_byte(output, id[i]);
+        }
+        return size;
+    });
+    return result;
 }
 
 } // namespace updater
