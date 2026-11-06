@@ -44,6 +44,13 @@ The preset selects the installed GCC 16.0.1 Ubuntu development snapshot
 uses available C++23/26 facilities, including `std::expected`, `std::flat_map`,
 `std::jthread`, and `std::byte`.
 
+## Local VS Code IntelliSense
+
+Copy the [IntelliSense template](.vscode/c_cpp_properties.example.json) to
+`.vscode/c_cpp_properties.json`. Set `env.stagingHeaders` to the local GCC and
+Linux header snapshot root (the directory containing `usr`). Git ignores this
+local copy so each developer can choose their own path.
+
 ## Validate or emit a feed offline
 
 These operations read configuration and catalog files without opening a listener
