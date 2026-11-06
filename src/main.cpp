@@ -1,6 +1,10 @@
+#include "updater/build_info.hpp"
 #include "updater/service.hpp"
+#include "updater/write_text.hpp"
 
+#include <cstdio>
 #include <iostream>
+#include <print>
 #include <stdexcept>
 
 int main(int argc, char** argv)
@@ -25,10 +29,14 @@ int main(int argc, char** argv)
             else if (argument == "--feed") { feed_mode = true; suite = value(); }
             else if (argument == "--id") { id_given = true; id = value(); }
             else if (argument == "--catalog-dir") catalog_override = value();
-            else if (argument == "--version") { std::cout << "Shared Updater Server 0.1.0\n"; return 0; }
-            else if (argument == "--help") {
-                std::cout << "shared-updater-server --config FILE [--check-config | --feed SUITE [--id UUID]]\n"
-                          << "Without an offline option, serve on the configured loopback listener.\n";
+            else if (argument == "--version") {
+                write_text(std::cout, build_info.describe()).put('\n');
+                return 0;
+            } else if (argument == "--help") {
+                write_text(std::cout, "shared-updater-server [--config FILE] [--check-config | --feed SUITE [--id UUID]]\n"
+                                      "shared-updater-server --version | --help\n"
+                                      "Use --feed to print a suite's Atom feed and exit.\n"
+                                      "Without an offline option, serve on the configured loopback listener.\n");
                 return 0;
             } else throw std::runtime_error("unknown option");
         }
@@ -43,18 +51,21 @@ int main(int argc, char** argv)
         }
         auto catalog = prepare_catalog(*config);
         if (!catalog) throw std::runtime_error(catalog.error());
-        if (check_only) { std::cout << format_success(**catalog) << std::endl; return 0; }
+        if (check_only) {
+            write_text(std::cout, format_success(**catalog)).put('\n');
+            return 0;
+        }
         if (feed_mode) {
             auto request = parse_check_target("/updchk/" + id + "/" + suite);
             if (!request) throw std::runtime_error("invalid feed request");
             auto feed = render_feed(**catalog, *request, config->feed);
             if (!feed) throw std::runtime_error(feed.error());
-            std::cout << *feed;
+            write_text(std::cout, *feed);
             return 0;
         }
         return run_service(std::move(*config), std::move(*catalog));
     } catch (const std::exception& error) {
-        std::cerr << "Error: " << error.what() << std::endl;
+        std::println(stderr, "Error: {}", error.what());
         return 1;
     }
 }

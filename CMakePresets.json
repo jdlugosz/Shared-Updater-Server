@@ -3,24 +3,34 @@
   "configurePresets": [
     {
       "name": "linux-gcc",
-      "displayName": "Linux / GCC 16 / C++26",
+      "displayName": "Linux / GCC 16.2 / C++26",
       "generator": "Ninja",
-      "binaryDir": "/opt/shared-updater-server/build/${presetName}",
+      "binaryDir": "/opt/shared-updater-server/build/gcc-$env{UPDATER_GCC_RELEASE}/${presetName}",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Linux"
       },
+      "environment": {
+        "UPDATER_GCC_RELEASE": "16.2.0",
+        "UPDATER_GCC_ROOT": "/opt/shared-updater-server/toolchains/gcc-$env{UPDATER_GCC_RELEASE}"
+      },
       "cacheVariables": {
-        "CMAKE_CXX_COMPILER": "g++-16",
+        "CMAKE_CXX_COMPILER": "$env{UPDATER_GCC_ROOT}/bin/g++",
+        "CMAKE_INSTALL_RPATH": "$env{UPDATER_GCC_ROOT}/lib64",
+        "CMAKE_BUILD_WITH_INSTALL_RPATH": "ON",
+        "CMAKE_CXX_FLAGS": "-fPIE -fasynchronous-unwind-tables -fstack-protector-strong -fstack-clash-protection -fcf-protection -fzero-init-padding-bits=all -Wformat -Wformat-security -Wbidi-chars=any",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG -D_FORTIFY_SOURCE=3",
+        "CMAKE_EXE_LINKER_FLAGS": "-pie -Wl,--as-needed,-z,now,-z,relro",
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "BUILD_TESTING": "ON"
+        "BUILD_TESTING": "ON",
+        "UPDATER_TRUST_SHARED_CHECKOUT": "ON"
       }
     },
     {
       "name": "linux-asan",
       "inherits": "linux-gcc",
-      "displayName": "GCC 16 / address sanitizer",
+      "displayName": "GCC 16.2 / address sanitizer",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "UPDATER_SANITIZER": "address"
@@ -29,7 +39,7 @@
     {
       "name": "linux-tsan",
       "inherits": "linux-gcc",
-      "displayName": "GCC 16 / thread sanitizer",
+      "displayName": "GCC 16.2 / thread sanitizer",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "UPDATER_SANITIZER": "thread"

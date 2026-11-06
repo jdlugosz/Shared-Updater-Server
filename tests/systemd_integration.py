@@ -101,6 +101,8 @@ def main():
         assert int(properties(unit)["NRestarts"]) >= 1
         assert request(fixture.port)[0] == 200
         journal = command("journalctl", "-u", unit, "--no-pager", "-o", "cat").stdout
+        version_lines = command(args.server, "--version").stdout.splitlines()
+        assert set(version_lines) <= set(journal.splitlines()), journal
         assert "watchdog" in journal.lower()
         assert ID not in journal
         (root / "service-journal.log").write_text(journal)

@@ -2,6 +2,16 @@
 
 The target is a repeatable pass from C++ unit tests through a real Ubuntu service and Caddy. See the [daemon requirements](DESIGN.md), [request pipeline and test interfaces](REQUEST-PIPELINE.md), and [SQLite design](DATABASE.md). Use synthetic UUIDs, suites, artifacts, and dedicated state directories in automated tests.
 
+## GCC 16.2 verification on November 6
+
+All 63 CTest cases passed on VPS Local with the GCC 16.2 release in each of
+the normal, AddressSanitizer/UndefinedBehaviorSanitizer, and ThreadSanitizer
+presets. A separate tagged checkout verified that `--version` reflects tag
+and checkout changes on rebuild and that identical metadata does not relink.
+The temporary installation used the matching C++ runtime and passed
+the isolated systemd acceptance test. The normal binary is
+`/opt/shared-updater-server/build/gcc-16.2.0/linux-gcc/shared-updater-server`.
+
 ## Implemented server verification on November 5
 
 | Check | Result |
@@ -16,7 +26,7 @@ The target is a repeatable pass from C++ unit tests through a real Ubuntu servic
 | Isolated systemd unit using the packaged hardening | Readiness, idle survival across watchdog periods, successful and rejected reload acknowledgement, actual watchdog termination/restart during a blocked writer, graceful stop, and backup restoration passed |
 | Temporary CMake installation | Executable, tools, unit permissions, and examples installed correctly; the installed executable validated its installed example catalog |
 
-The final native binary is
+That run used
 `/opt/shared-updater-server/build/linux-gcc/shared-updater-server`.
 The acceptance test creates a uniquely named unit on VPS Local and removes its
 unit, state, and logs. It leaves the existing Caddy service unchanged.

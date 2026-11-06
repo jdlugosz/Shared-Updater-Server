@@ -4,7 +4,7 @@
   },
   "configurations": [
     {
-      "name": "VPS Local GCC 16",
+      "name": "VPS Local GCC 16.2",
       "compilerPath": "",
       "intelliSenseMode": "linux-gcc-x64",
       "cppStandard": "c++26",
@@ -17,11 +17,14 @@
       "includePath": [
         "${workspaceFolder}/include",
         "${stagingHeaders}/usr/include/libxml2",
-        "${stagingHeaders}/usr/include/c++/16",
-        "${stagingHeaders}/usr/include/x86_64-linux-gnu/c++/16",
-        "${stagingHeaders}/usr/include/c++/16/backward",
-        "${stagingHeaders}/usr/lib/gcc/x86_64-linux-gnu/16/include",
+        "${stagingHeaders}/gcc-16.2.0/include/c++/16.2.0",
+        "${stagingHeaders}/gcc-16.2.0/include/c++/16.2.0/x86_64-linux-gnu",
+        "${stagingHeaders}/gcc-16.2.0/include/c++/16.2.0/backward",
+        "${stagingHeaders}/gcc-16.2.0/lib/gcc/x86_64-linux-gnu/16.2.0/include",
+        "${stagingHeaders}/gcc-16.2.0/lib/gcc/x86_64-linux-gnu/16.2.0/include-fixed/x86_64-linux-gnu",
+        "${stagingHeaders}/gcc-16.2.0/lib/gcc/x86_64-linux-gnu/16.2.0/include-fixed",
         "${stagingHeaders}/usr/local/include",
+        "${stagingHeaders}/gcc-16.2.0/include",
         "${stagingHeaders}/usr/include/x86_64-linux-gnu",
         "${stagingHeaders}/usr/include"
       ]

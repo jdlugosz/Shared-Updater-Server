@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.30)
 project(SharedUpdaterServer VERSION 0.1.0 LANGUAGES CXX)
 
 set(UPDATER_SANITIZER "none" CACHE STRING "none, address, or thread")
+set(UPDATER_BUILD_VARIANT "normal" CACHE STRING "Build label, such as profile or special")
+option(UPDATER_TRUST_SHARED_CHECKOUT "Allow Git metadata reads from the mounted staging checkout" OFF)
+if(NOT UPDATER_BUILD_VARIANT MATCHES "^[A-Za-z0-9_.-]+$")
+    message(FATAL_ERROR "UPDATER_BUILD_VARIANT must be a nonempty label with no spaces")
+endif()
 if(UPDATER_SANITIZER STREQUAL "address")
     add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie)
     add_link_options(-fsanitize=address,undefined -no-pie)
@@ -27,6 +32,11 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 include(CTest)
+if(BUILD_TESTING)
+    find_package(Git REQUIRED)
+else()
+    find_package(Git QUIET)
+endif()
 
 find_package(LibXml2 REQUIRED)
 find_package(Threads REQUIRED)
@@ -50,6 +60,23 @@ target_link_libraries(shared-updater-server PRIVATE updater-http ${SYSTEMD_LIBRA
 target_compile_features(shared-updater-server PRIVATE cxx_std_26)
 set_target_properties(shared-updater-server PROPERTIES CXX_EXTENSIONS OFF CXX_SCAN_FOR_MODULES OFF)
 target_compile_options(shared-updater-server PRIVATE -Wall -Wextra -Wpedantic)
+
+set(build_info_source "${CMAKE_CURRENT_BINARY_DIR}/generated/$<CONFIG>/build_info.cpp")
+add_custom_target(updater-build-info
+    COMMAND "${CMAKE_COMMAND}"
+        "-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
+        "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+        "-DTRUST_SHARED_CHECKOUT=${UPDATER_TRUST_SHARED_CHECKOUT}"
+        "-DPROJECT_VERSION=${PROJECT_VERSION}"
+        "-DBUILD_CONFIG=$<CONFIG>"
+        "-DBUILD_VARIANT=${UPDATER_BUILD_VARIANT}"
+        "-DBUILD_SANITIZER=${UPDATER_SANITIZER}"
+        "-DOUTPUT_FILE=${build_info_source}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuildInfo.cmake"
+    BYPRODUCTS "${build_info_source}"
+    VERBATIM)
+add_dependencies(shared-updater-server updater-build-info)
+target_sources(shared-updater-server PRIVATE "${build_info_source}")
 
 install(TARGETS shared-updater-server RUNTIME DESTINATION libexec)
 install(PROGRAMS tools/census.py tools/publish_catalog.py DESTINATION libexec/shared-updater)
@@ -84,11 +111,15 @@ if(BUILD_TESTING)
     catch_discover_tests(updater-server-tests)
 
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME updater.version
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/version_integration.py"
+            "$<TARGET_FILE:shared-updater-server>" "${build_info_source}" "${CMAKE_COMMAND}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuildInfo.cmake" "${GIT_EXECUTABLE}")
+    set_tests_properties(updater.version PROPERTIES TIMEOUT 30 LABELS "integration;build")
     add_test(NAME updater.http COMMAND ${Python3_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/server_integration.py
         --server $<TARGET_FILE:shared-updater-server> --mode http)
     set_tests_properties(updater.http PROPERTIES TIMEOUT 45 LABELS "integration;http")
-    find_package(Git REQUIRED)
     foreach(operation IN ITEMS operations publication)
         add_test(NAME updater.${operation} COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/operator_integration.py

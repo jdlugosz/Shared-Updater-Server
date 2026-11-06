@@ -1,5 +1,7 @@
 #include "updater/service.hpp"
+#include "updater/build_info.hpp"
 #include "updater/json.hpp"
+#include "updater/write_text.hpp"
 
 #include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/post.hpp>
@@ -10,11 +12,13 @@
 #include <algorithm>
 #include <cerrno>
 #include <csignal>
+#include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
 #include <format>
 #include <future>
 #include <iostream>
+#include <print>
 #include <set>
 #include <stdexcept>
 #include <thread>
@@ -76,7 +80,8 @@ public:
     {
         auto started = server_.start();
         if (!started) return std::unexpected(started.error());
-        std::cout << report << "\nListening on " << config_.http.address << ":" << *started << std::endl;
+        std::println("{}\nListening on {}:{}", report, config_.http.address, *started);
+        std::fflush(stdout);
         sd_notify(0, "READY=1\nSTATUS=Serving update checks");
         arm_signal();
         schedule_tick();
@@ -161,7 +166,7 @@ private:
                 }
                 reload_timed_out_ = true;
                 reload_state_ = "rejected";
-                std::cerr << "Catalog reload timed out; serving the previous revision\n";
+                std::println(stderr, "Catalog reload timed out; serving the previous revision");
                 sd_notify(0, "READY=1\nSTATUS=Catalog reload timed out; previous revision retained");
             }
         });
@@ -170,7 +175,11 @@ private:
     {
         reload_busy_ = false;
         reload_state_ = accepted ? "accepted" : "rejected";
-        if (!detail.empty()) (accepted ? std::cout : std::cerr) << detail << std::endl;
+        if (!detail.empty()) {
+            auto* output = accepted ? stdout : stderr;
+            std::println(output, "{}", detail);
+            std::fflush(output);
+        }
         sd_notify(0, accepted ? "READY=1\nSTATUS=Catalog activated"
                              : "READY=1\nSTATUS=Catalog rejected; previous revision retained");
         if (std::exchange(reload_again_, false) && !stopping_) request_reload();
@@ -223,17 +232,17 @@ private:
         const auto now = std::chrono::steady_clock::now();
         const auto status = worker_.status();
         if (status.failed && !stopping_) {
-            std::cerr << "Worker failed: " << status.error << "\n";
+            std::println(stderr, "Worker failed: {}", status.error);
             stop(1);
         }
         if (!status.error.empty() && status.error != last_error_) {
             last_error_ = status.error;
-            std::cerr << "Worker status: " << status.error << "\n";
+            std::println(stderr, "Worker status: {}", status.error);
         }
         const bool healthy = worker_healthy(status, now, config_.worker_budget);
         if (!healthy && !warned_stall_ && !stopping_) {
             warned_stall_ = true;
-            std::cerr << "Worker is not making healthy progress\n";
+            std::println(stderr, "Worker is not making healthy progress");
         }
         if (healthy) {
             warned_stall_ = false;
@@ -254,7 +263,8 @@ private:
                 return;
             }
             if (now - stop_started_ >= config_.shutdown_timeout + 5s) {
-                std::cerr << "Shutdown hard deadline exceeded\n" << std::flush;
+                std::println(stderr, "Shutdown hard deadline exceeded");
+                std::fflush(stderr);
                 std::_Exit(1);
             }
         }
@@ -266,6 +276,7 @@ private:
 
 int run_service(ServerConfig config, std::unique_ptr<const Catalog> catalog)
 {
+    write_text(std::cout, build_info.describe()).put('\n').flush();
     ::umask(0077);
     // systemd DynamicUser exposes private StateDirectory/LogsDirectory through
     // manager-owned symlinks. Validate and lock their resolved directories.

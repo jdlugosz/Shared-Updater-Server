@@ -24,7 +24,7 @@ ctest --preset linux-gcc
 ```
 
 The executable is
-`/opt/shared-updater-server/build/linux-gcc/shared-updater-server`.
+`/opt/shared-updater-server/build/gcc-16.2.0/linux-gcc/shared-updater-server`.
 
 The existing PowerShell helper runs the normal build and tests through the
 `vps-stage` SSH alias:
@@ -33,23 +33,34 @@ The existing PowerShell helper runs the normal build and tests through the
 pwsh -NoProfile -File .\tools\build-staging.ps1
 ```
 
-Its `-Bootstrap` option installs Ubuntu development prerequisites through
-`vps-stage-root`. Packages are `g++-16`, `cmake`, `ninja-build`,
-`libsqlite3-dev`, `libtomlplusplus-dev`, `libcatch2-dev`, `libboost-dev`,
-`libxml2-dev`, `libsystemd-dev`, `python3`, `openssl`, and `git`.
+Its `-Bootstrap` option installs the Ubuntu development prerequisites and
+provisions the GCC 16.2 release build from Compiler Explorer through
+`vps-stage-root`. The installer checks the archive's SHA-256 and places the
+compiler and its runtime under `/opt/shared-updater-server/toolchains/gcc-16.2.0`.
 Caddy is needed for the proxy acceptance tests.
 
-The preset selects the installed GCC 16.0.1 Ubuntu development snapshot
-(`16-20260322-1ubuntu1`) explicitly and uses C++26 mode. The implementation
-uses available C++23/26 facilities, including `std::expected`, `std::flat_map`,
-`std::jthread`, and `std::byte`.
+The staging presets use GCC 16.2 in C++26 mode and keep its build trees separate
+by compiler version. They set the runtime search path for built and installed
+executables to the matching `lib64` directory. The optimized preset keeps
+Ubuntu's fortification and linker hardening settings. A production install
+needs a compatible C++ runtime on its target host.
+
+Run `shared-updater-server --version` to read the version, build status and
+configuration, UTC build date, full Git commit, checkout state, and exact tag
+embedded in the executable. An exact tag supplies the version label. Untagged
+builds use the CMake project version. A clean tagged `Release`, `RelWithDebInfo`,
+or `MinSizeRel` build qualifies as a release when built without a sanitizer or
+custom build variant. Label a profiling build with `-DUPDATER_BUILD_VARIANT=profile`,
+or choose another descriptive label for a custom build. `SOURCE_DATE_EPOCH`
+can supply a fixed timestamp for a reproducible build date.
 
 ## Local VS Code IntelliSense
 
 Copy the [IntelliSense template](.vscode/c_cpp_properties.example.json) to
-`.vscode/c_cpp_properties.json`. Set `env.stagingHeaders` to the local GCC and
-Linux header snapshot root (the directory containing `usr`). Git ignores this
-local copy so each developer can choose their own path.
+`.vscode/c_cpp_properties.json`. Set `env.stagingHeaders` to the local snapshot
+root, with `gcc-16.2.0` from the release toolchain and `usr` from staging's
+system headers. Git ignores this local copy so each developer can choose
+their own path.
 
 ## Validate or emit a feed offline
 
@@ -57,15 +68,16 @@ These operations read configuration and catalog files without opening a listener
 or creating census/log state:
 
 ```sh
-/opt/shared-updater-server/build/linux-gcc/shared-updater-server \
+/opt/shared-updater-server/build/gcc-16.2.0/linux-gcc/shared-updater-server \
   --config examples/server.toml --check-config
 
-/opt/shared-updater-server/build/linux-gcc/shared-updater-server \
+/opt/shared-updater-server/build/gcc-16.2.0/linux-gcc/shared-updater-server \
   --config examples/server.toml --feed Launcher
 ```
 
 Add `--id UUID` to the feed command to inspect a targeted offering. The default
-is Nil, the all-zero UUID. A publication tool can validate a staged directory
+is Nil, the all-zero UUID. `--feed` prints the suite's Atom XML to stdout and
+exits. A publication tool can validate a staged directory
 with `--catalog-dir DIRECTORY --check-config`; that override is limited to
 offline validation.
 
@@ -87,7 +99,7 @@ defaults. Relative paths resolve against the configuration file.
 Install the selected build with the default `/usr/local` prefix:
 
 ```sh
-sudo cmake --install /opt/shared-updater-server/build/linux-gcc
+sudo cmake --install /opt/shared-updater-server/build/gcc-16.2.0/linux-gcc
 ```
 
 This installs the executable under `/usr/local/libexec`, the unit under
@@ -109,6 +121,8 @@ sudo systemctl start shared-updater-server
 sudo systemctl reload shared-updater-server
 journalctl -u shared-updater-server
 ```
+
+The daemon writes the same build information as `--version` when it starts.
 
 The [Caddy example](deploy/updater.caddy) forwards the full
 `/updchk/<UUID>/<suite>` path to loopback, preserves concurrency, and filters
@@ -143,7 +157,7 @@ creates a uniquely named temporary unit and state, and removes them afterwards:
 
 ```sh
 sudo python3 tests/systemd_integration.py \
-  --server /opt/shared-updater-server/build/linux-gcc/shared-updater-server \
+  --server /opt/shared-updater-server/build/gcc-16.2.0/linux-gcc/shared-updater-server \
   --unit-template deploy/shared-updater-server.service
 ```
 
