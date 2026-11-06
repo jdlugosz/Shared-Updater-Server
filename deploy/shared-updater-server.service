@@ -1,0 +1,37 @@
+[Unit]
+Description=Shared Updater catalog and census server
+After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=notify-reload
+NotifyAccess=main
+DynamicUser=yes
+ExecStart=/usr/local/libexec/shared-updater-server --config /etc/shared-updater-server/server.toml
+WorkingDirectory=/
+StateDirectory=shared-updater-server
+StateDirectoryMode=0700
+LogsDirectory=shared-updater-server
+LogsDirectoryMode=0700
+UMask=0077
+WatchdogSec=30s
+Restart=on-failure
+RestartSec=2s
+TimeoutStartSec=45s
+TimeoutStopSec=25s
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+
+[Install]
+WantedBy=multi-user.target

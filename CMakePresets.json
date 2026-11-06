@@ -1,0 +1,88 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "linux-gcc",
+      "displayName": "Linux / GCC 16 / C++26",
+      "generator": "Ninja",
+      "binaryDir": "/opt/shared-updater-server/build/${presetName}",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++-16",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "linux-asan",
+      "inherits": "linux-gcc",
+      "displayName": "GCC 16 / address sanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "UPDATER_SANITIZER": "address"
+      }
+    },
+    {
+      "name": "linux-tsan",
+      "inherits": "linux-gcc",
+      "displayName": "GCC 16 / thread sanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "UPDATER_SANITIZER": "thread"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-gcc",
+      "configurePreset": "linux-gcc",
+      "jobs": 2
+    },
+    {
+      "configurePreset": "linux-asan",
+      "name": "linux-asan",
+      "jobs": 1
+    },
+    {
+      "configurePreset": "linux-tsan",
+      "name": "linux-tsan",
+      "jobs": 1
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-gcc",
+      "configurePreset": "linux-gcc",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "configurePreset": "linux-asan",
+      "name": "linux-asan",
+      "execution": {
+        "noTestsAction": "error"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "configurePreset": "linux-tsan",
+      "name": "linux-tsan",
+      "execution": {
+        "noTestsAction": "error"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

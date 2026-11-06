@@ -1,0 +1,106 @@
+cmake_minimum_required(VERSION 3.30)
+project(SharedUpdaterServer VERSION 0.1.0 LANGUAGES CXX)
+
+set(UPDATER_SANITIZER "none" CACHE STRING "none, address, or thread")
+if(UPDATER_SANITIZER STREQUAL "address")
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie)
+    add_link_options(-fsanitize=address,undefined -no-pie)
+elseif(UPDATER_SANITIZER STREQUAL "thread")
+    add_compile_options(-fsanitize=thread -fno-omit-frame-pointer -fno-pie)
+    add_link_options(-fsanitize=thread -no-pie)
+elseif(NOT UPDATER_SANITIZER STREQUAL "none")
+    message(FATAL_ERROR "Unknown UPDATER_SANITIZER")
+endif()
+
+find_package(tomlplusplus 3.4 CONFIG REQUIRED)
+
+add_library(updater-catalog STATIC src/catalog.cpp src/binary.cpp src/xml.cpp src/uri.cpp)
+target_include_directories(updater-catalog PUBLIC include)
+target_compile_features(updater-catalog PUBLIC cxx_std_26)
+target_link_libraries(updater-catalog PRIVATE tomlplusplus::tomlplusplus)
+set_target_properties(updater-catalog PROPERTIES
+    CXX_EXTENSIONS OFF
+    CXX_SCAN_FOR_MODULES OFF
+)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(updater-catalog PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+include(CTest)
+
+find_package(LibXml2 REQUIRED)
+find_package(Threads REQUIRED)
+find_package(SQLite3 REQUIRED)
+add_library(updater-core STATIC src/request.cpp src/atom.cpp src/contact_log.cpp src/census.cpp src/processor.cpp src/worker.cpp src/json.cpp)
+target_link_libraries(updater-core PUBLIC updater-catalog PRIVATE LibXml2::LibXml2 Threads::Threads SQLite::SQLite3)
+target_compile_features(updater-core PUBLIC cxx_std_26)
+set_target_properties(updater-core PROPERTIES CXX_EXTENSIONS OFF CXX_SCAN_FOR_MODULES OFF)
+target_compile_options(updater-core PRIVATE -Wall -Wextra -Wpedantic)
+
+find_package(Boost 1.83 CONFIG REQUIRED)
+add_library(updater-http STATIC src/http_server.cpp src/config.cpp)
+target_link_libraries(updater-http PUBLIC updater-core Boost::headers PRIVATE tomlplusplus::tomlplusplus)
+target_compile_features(updater-http PUBLIC cxx_std_26)
+set_target_properties(updater-http PROPERTIES CXX_EXTENSIONS OFF CXX_SCAN_FOR_MODULES OFF)
+target_compile_options(updater-http PRIVATE -Wall -Wextra -Wpedantic)
+
+find_library(SYSTEMD_LIBRARY systemd REQUIRED)
+add_executable(shared-updater-server src/main.cpp src/service.cpp)
+target_link_libraries(shared-updater-server PRIVATE updater-http ${SYSTEMD_LIBRARY})
+target_compile_features(shared-updater-server PRIVATE cxx_std_26)
+set_target_properties(shared-updater-server PROPERTIES CXX_EXTENSIONS OFF CXX_SCAN_FOR_MODULES OFF)
+target_compile_options(shared-updater-server PRIVATE -Wall -Wextra -Wpedantic)
+
+install(TARGETS shared-updater-server RUNTIME DESTINATION libexec)
+install(PROGRAMS tools/census.py tools/publish_catalog.py DESTINATION libexec/shared-updater)
+install(FILES deploy/shared-updater-server.service DESTINATION lib/systemd/system)
+install(DIRECTORY examples/ DESTINATION share/shared-updater/examples)
+
+if(BUILD_TESTING)
+    find_package(SQLite3 REQUIRED)
+    find_package(Catch2 3 CONFIG REQUIRED)
+
+    add_executable(updater-server-tests tests/test_main.cpp tests/catalog_tests.cpp tests/feed_tests.cpp tests/persistence_tests.cpp tests/worker_tests.cpp tests/config_tests.cpp)
+    target_compile_features(updater-server-tests PRIVATE cxx_std_26)
+    set_target_properties(updater-server-tests PROPERTIES
+        CXX_EXTENSIONS OFF
+        CXX_SCAN_FOR_MODULES OFF
+    )
+    target_link_libraries(updater-server-tests PRIVATE
+        updater-catalog
+        updater-core
+        updater-http
+        LibXml2::LibXml2
+        SQLite::SQLite3
+        tomlplusplus::tomlplusplus
+        Catch2::Catch2WithMain
+    )
+
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(updater-server-tests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+
+    include(Catch)
+    catch_discover_tests(updater-server-tests)
+
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME updater.http COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/server_integration.py
+        --server $<TARGET_FILE:shared-updater-server> --mode http)
+    set_tests_properties(updater.http PROPERTIES TIMEOUT 45 LABELS "integration;http")
+    find_package(Git REQUIRED)
+    foreach(operation IN ITEMS operations publication)
+        add_test(NAME updater.${operation} COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/operator_integration.py
+            --server $<TARGET_FILE:shared-updater-server> --tools ${CMAKE_CURRENT_SOURCE_DIR}/tools
+            --mode ${operation})
+        set_tests_properties(updater.${operation} PROPERTIES TIMEOUT 45 LABELS "integration;operators")
+    endforeach()
+    find_program(CADDY_EXECUTABLE caddy)
+    if(CADDY_EXECUTABLE)
+        add_test(NAME updater.caddy COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/server_integration.py
+            --server $<TARGET_FILE:shared-updater-server> --mode proxy --caddy ${CADDY_EXECUTABLE})
+        set_tests_properties(updater.caddy PROPERTIES TIMEOUT 45 LABELS "integration;caddy")
+    endif()
+endif()

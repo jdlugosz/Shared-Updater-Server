@@ -1,0 +1,31 @@
+{
+  "env": {
+    "stagingHeaders": "${workspaceFolder}/out/intellisense/vps-stage"
+  },
+  "configurations": [
+    {
+      "name": "VPS Local GCC 16",
+      "compilerPath": "",
+      "intelliSenseMode": "linux-gcc-x64",
+      "cppStandard": "c++26",
+      "defines": [
+        "_GNU_SOURCE=1",
+        "NDEBUG",
+        "TOML_HEADER_ONLY=0",
+        "TOML_SHARED_LIB=1"
+      ],
+      "includePath": [
+        "${workspaceFolder}/include",
+        "${stagingHeaders}/usr/include/libxml2",
+        "${stagingHeaders}/usr/include/c++/16",
+        "${stagingHeaders}/usr/include/x86_64-linux-gnu/c++/16",
+        "${stagingHeaders}/usr/include/c++/16/backward",
+        "${stagingHeaders}/usr/lib/gcc/x86_64-linux-gnu/16/include",
+        "${stagingHeaders}/usr/local/include",
+        "${stagingHeaders}/usr/include/x86_64-linux-gnu",
+        "${stagingHeaders}/usr/include"
+      ]
+    }
+  ],
+  "version": 4
+}

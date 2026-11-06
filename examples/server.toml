@@ -1,0 +1,29 @@
+listen = "127.0.0.1:8080"
+catalog_dir = "catalog"
+publisher_id_base = "https://dlugosz.enterprises/updater/id/"
+state_dir = "/var/lib/shared-updater-server"
+log_dir = "/var/log/shared-updater-server"
+
+[limits]
+connections = 128
+unfinished_requests = 64
+contact_log_bytes_per_file = 1048576
+catalog_bytes = 8388608
+catalog_fragments = 4096
+response_bytes = 524288
+header_bytes = 8192
+target_bytes = 256
+
+[timeouts]
+header_ms = 5000
+queue_ms = 5000
+write_ms = 10000
+sqlite_busy_ms = 2000
+worker_ms = 10000
+reload_ms = 30000
+shutdown_ms = 20000
+
+[retention]
+activity_days = 400
+inactive_installation_days = 730
+batch = 256

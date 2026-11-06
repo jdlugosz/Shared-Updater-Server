@@ -1,0 +1,32 @@
+# Merge the following logger definitions into the existing global options.
+{
+    log default {
+        exclude http.log.error.updater
+    }
+    log updater_runtime {
+        include http.log.error.updater
+        output stderr
+        format filter {
+            wrap json
+            fields {
+                request delete
+            }
+        }
+    }
+}
+
+# Replace this example hostname and merge the handlers into the site's config.
+updates.example.invalid {
+    log updater
+    log_skip /updchk/*
+    handle /updchk/* {
+        reverse_proxy 127.0.0.1:8080 {
+            lb_retries 0
+            transport http {
+                versions 1.1
+                dial_timeout 2s
+                response_header_timeout 25s
+            }
+        }
+    }
+}

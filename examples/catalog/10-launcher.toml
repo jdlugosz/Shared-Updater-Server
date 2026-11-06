@@ -1,0 +1,31 @@
+[[suite]]
+id = "launcher"
+title = "Launcher"
+packages = ["launcher"]
+
+[[package]]
+id = "launcher"
+title = "Launcher"
+kind = "installer"
+
+# Illustrative metadata only: replace URLs, size, and checksum before publishing.
+[[build]]
+package = "launcher"
+id = "example-build-001"
+version = "1.0"
+published_at = 2026-11-05T12:00:00Z
+about_url = "https://example.invalid/launcher"
+
+[[build.artifact]]
+platform = "windows-x64"
+url = "https://example.invalid/downloads/Launcher.exe"
+media_type = "application/octet-stream"
+size = 1234
+sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+
+[[track]]
+suite = "launcher"
+package = "launcher"
+name = "current"
+platform = "windows-x64"
+build = "example-build-001"
