@@ -9,6 +9,7 @@
 import std;
 #else
 #include <algorithm>
+#include <format>
 #endif
 
 namespace {
@@ -74,6 +75,7 @@ TEST_CASE("Route parsing normalizes suites and validates the exact two segments"
     const auto request = parse_check_target("/updchk/12345678-1234-4234-8234-1234567890AB/Launcher");
     REQUIRE(request);
     REQUIRE(request->suite == "launcher");
+    REQUIRE(request->platforms.empty());
     REQUIRE(uuid_string(request->installation_id).ends_with("90ab"));
     REQUIRE(parse_check_target("/updchk/00000000-0000-0000-0000-000000000000/Launcher"));
     for (const auto target : {"/updchk/", "/updchk/bad/launcher",
@@ -83,6 +85,33 @@ TEST_CASE("Route parsing normalizes suites and validates the exact two segments"
         "/updchk/00000000-0000-0000-0000-000000000000/la%2Funcher"})
         REQUIRE(parse_check_target(target).error() == RouteError::invalid);
     REQUIRE(parse_check_target("/something").error() == RouteError::not_found);
+}
+
+TEST_CASE("Check targets accept a bounded list of canonical platform IDs", "[request]")
+{
+    constexpr std::string_view base = "/updchk/00000000-0000-0000-0000-000000000000/Launcher";
+    const auto selected = parse_check_target(std::format("{}?platform=windows-x64-avx2&platform=64bit_linux", base));
+    REQUIRE(selected);
+    REQUIRE(selected->installation_id == nil_uuid);
+    REQUIRE(selected->suite == "launcher");
+    REQUIRE(selected->platforms == std::vector<std::string>{"windows-x64-avx2", "64bit_linux"});
+
+    for (const auto suffix : {"?", "?platform", "?platform=", "?platform=Windows-x64", "?platform=-x64",
+                              "?platform=windows%2Dx64", "?platform=windows/x64", "?platform=windows+x64",
+                              "?platform=windows-x64,linux-x64", "?platform=windows-x64&",
+                              "?platform=windows-x64&&platform=linux-x64",
+                              "?platform=windows-x64&track=beta", "?platform=windows-x64#fragment"}) {
+        CAPTURE(suffix);
+        const auto invalid = parse_check_target(std::format("{}{}", base, suffix));
+        REQUIRE_FALSE(invalid);
+        REQUIRE(invalid.error() == RouteError::invalid);
+    }
+    REQUIRE_FALSE(parse_check_target(std::format("{}?platform={}", base, std::string(65, 'p'))));
+    const auto boundary = std::format("/updchk/{}/{}?platform={}&platform={}", uuid_string(nil_uuid),
+                                      std::string(64, 's'), std::string(64, 'a'), std::string(63, 'b'));
+    REQUIRE(boundary.size() == 256);
+    REQUIRE(parse_check_target(boundary));
+    REQUIRE_FALSE(parse_check_target(std::format("{}b", boundary)));
 }
 
 TEST_CASE("XML checking is reusable independently of TOML or a writer", "[xml]")
@@ -140,7 +169,7 @@ TEST_CASE("Targeted tracks replace tags without hiding archived public builds", 
         REQUIRE(entries.size() == 1);
         REQUIRE(field(entries.front(), "track", updater_namespace) == "current");
     }
-    const auto rendered = render_feed(*catalog, {id, "launcher"});
+    const auto rendered = render_feed(*catalog, {id, "launcher", {"windows-x64"}});
     REQUIRE(rendered);
     Document doc(*rendered);
     const auto entries = children(doc.root(), "entry");
@@ -151,7 +180,47 @@ TEST_CASE("Targeted tracks replace tags without hiding archived public builds", 
     const auto public_rendered = render_feed(*catalog, {nil_uuid, "launcher"});
     Document public_doc(*public_rendered);
     REQUIRE(field(entries.front(), "id") == field(children(public_doc.root(), "entry").front(), "id"));
+    const auto incompatible = render_feed(*catalog, {id, "launcher", {"linux-arm64"}});
+    REQUIRE(incompatible);
+    REQUIRE(children(Document(*incompatible).root(), "entry").empty());
     REQUIRE(preflight_feeds(*catalog));
+}
+
+TEST_CASE("Platform filtering keeps generic and optimized targets, shared artifacts, and rollback builds", "[feed]")
+{
+    auto catalog = test::catalog();
+    auto& current = catalog->builds.at({"app", "build-001"});
+    const auto artifact = current.artifacts.at("windows-x64");
+    for (const auto* platform : {"any", "linux-x64", "windows-x64-avx2"})
+        current.artifacts.emplace(platform, artifact);
+    catalog->tracks.emplace(TrackKey{"launcher", "app", "current", "windows-x64-avx2", {}}, "build-001");
+    auto archived = current;
+    archived.version = "1.2.2";
+    archived.artifacts.clear();
+    archived.artifacts.emplace("windows-x64", artifact);
+    catalog->builds.emplace(BuildKey{"app", "retained"}, std::move(archived));
+
+    const auto filtered = render_feed(*catalog, {nil_uuid, "launcher",
+        {"windows-x64-avx2", "windows-x64", "windows-x64"}});
+    REQUIRE(filtered);
+    const Document doc(*filtered);
+    const auto entries = children(doc.root(), "entry");
+    REQUIRE(entries.size() == 4);
+    REQUIRE(field(entries[0], "platform", updater_namespace) == "any");
+    REQUIRE(field(entries[1], "platform", updater_namespace) == "windows-x64");
+    REQUIRE(field(entries[1], "track", updater_namespace) == "current");
+    REQUIRE(field(entries[2], "platform", updater_namespace) == "windows-x64-avx2");
+    REQUIRE(field(entries[2], "track", updater_namespace) == "current");
+    REQUIRE(field(entries[3], "platform", updater_namespace) == "windows-x64");
+    REQUIRE(field(entries[3], "build", updater_namespace) == "retained");
+    REQUIRE(children(entries[3], "track", updater_namespace).empty());
+
+    const auto unknown = render_feed(*catalog, {nil_uuid, "launcher", {"future-platform"}});
+    REQUIRE(unknown);
+    const Document unknown_doc(*unknown);
+    const auto shared = children(unknown_doc.root(), "entry");
+    REQUIRE(shared.size() == 1);
+    REQUIRE(field(shared.front(), "platform", updater_namespace) == "any");
 }
 
 TEST_CASE("Feed caps apply to serialized bytes and preflight includes targeted offerings", "[feed]")

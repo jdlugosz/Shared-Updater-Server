@@ -27,6 +27,7 @@ ID = "12345678-1234-4234-8234-1234567890ab"
 TARGET = "abcdef01-1234-4234-8234-1234567890ab"
 ATOM = "{http://www.w3.org/2005/Atom}"
 UPD = "{https://dlugosz.enterprises/ns/updater/1}"
+PLATFORMS = ("any", "linux-x64", "windows-x64", "windows-x64-avx2")
 
 
 def wait_for(predicate, description, timeout=8):
@@ -68,6 +69,10 @@ def parsed(data):
     return result
 
 
+def feed_platforms(data):
+    return [entry.findtext(UPD + "platform") for entry in parsed(data).findall(ATOM + "entry")]
+
+
 class Process:
     def __init__(self, command, log, env=None):
         self.log = Path(log)
@@ -94,7 +99,7 @@ class Process:
 
 
 class Fixture:
-    def __init__(self, root, binary, *, artifact_url=None, limits="", times=""):
+    def __init__(self, root, binary, *, artifact_url=None, limits="", times="", platforms=("any",)):
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self.binary = binary
@@ -106,6 +111,7 @@ class Fixture:
         self.process = None
         self.payload = b"Shared updater integration artifact\n"
         self.url = artifact_url or "https://example.invalid/downloads/fixture.bin"
+        self.platforms = platforms
         self.config.write_text(f'''listen = "127.0.0.1:0"
 catalog_dir = "catalog"
 state_dir = "state"
@@ -122,6 +128,13 @@ header_ms = 200
     def write_catalog(self, revision, invalid=False):
         digest = hashlib.sha256(self.payload).hexdigest()
         build = "missing" if invalid else "stable"
+        artifacts = "".join(f'''[[build.artifact]]
+platform = "{platform}"
+url = "{self.url}"
+media_type = "application/octet-stream"
+size = {len(self.payload)}
+sha256 = "{digest}"
+''' for platform in self.platforms)
         content = f'''[catalog]
 schema_version = 1
 revision = "{revision}"
@@ -145,13 +158,7 @@ id = "stable"
 version = "1.0"
 published_at = 2026-11-04T12:00:00Z
 about_url = "https://example.invalid/notes?a=1&b=2"
-[[build.artifact]]
-platform = "any"
-url = "{self.url}"
-media_type = "application/octet-stream"
-size = {len(self.payload)}
-sha256 = "{digest}"
-[[track]]
+{artifacts}[[track]]
 suite = "launcher"
 package = "app"
 name = "current"
@@ -205,7 +212,7 @@ build = "{build}"
 
 
 def offline_and_http(root, binary):
-    fixture = Fixture(root / "http", binary, times="reload_ms = 50")
+    fixture = Fixture(root / "http", binary, times="reload_ms = 50", platforms=PLATFORMS)
     try:
         checked = subprocess.run(fixture.command("--check-config"), capture_output=True, text=True, timeout=8)
         assert checked.returncode == 0, checked.stderr
@@ -221,7 +228,13 @@ def offline_and_http(root, binary):
         assert status == 200 and headers["Cache-Control"] == "no-store"
         assert headers["Content-Type"] == "application/atom+xml; charset=utf-8"
         assert parsed(body).findtext(UPD + "revision") == "initial"
-        assert request(fixture.port)[0] == 200
+        assert feed_platforms(body) == list(PLATFORMS)
+        status, headers, body = fetch(
+            fixture.port, f"/updchk/{ID}/Launcher?platform=windows-x64-avx2&platform=windows-x64")
+        assert status == 200 and headers["Cache-Control"] == "no-store"
+        assert feed_platforms(body) == ["any", "windows-x64", "windows-x64-avx2"]
+        contact = fixture.contacts()[-1]
+        assert set(contact) == {"at", "id", "suite"} and contact["id"] == ID and contact["suite"] == "launcher"
         assert request(fixture.port, suite="Other")[0] == 200
         for _ in range(2):
             assert request(fixture.port, NIL)[0] == 200
@@ -230,6 +243,7 @@ def offline_and_http(root, binary):
                                        (NIL, "1bad", 400), (NIL, "Launcher/extra", 400)):
             assert request(fixture.port, identity, suite)[0] == code
         assert fetch(fixture.port, f"/updchk/{ID}/Launcher?x=1")[0] == 400
+        assert fetch(fixture.port, f"/updchk/{ID}/Launcher?platform=")[0] == 400
         assert fetch(fixture.port, "/elsewhere")[0] == 404
         assert request(fixture.port, method="POST")[0] == 405
         assert request(fixture.port, method="HEAD")[2] == b""
@@ -330,7 +344,7 @@ def proxy(root, binary, caddy):
         reserved.bind(("127.0.0.1", 0))
         port = reserved.getsockname()[1]
     fixture = Fixture(root / "proxy", binary,
-                      artifact_url=f"https://127.0.0.1:{port}/downloads/fixture.bin")
+                      artifact_url=f"https://127.0.0.1:{port}/downloads/fixture.bin", platforms=PLATFORMS)
     caddy_process = None
     try:
         fixture.start()
@@ -397,6 +411,7 @@ https://127.0.0.1:{port} {{
         wait_for(lambda: fetch(port, "/downloads/fixture.bin", context=context)[0] == 200, "TLS Caddy startup")
         status, headers, body = request(port, context=context)
         assert status == 200 and headers["Cache-Control"] == "no-store"
+        assert feed_platforms(body) == list(PLATFORMS)
         feed = parsed(body)
         links = feed.find(ATOM + "entry").findall(ATOM + "link")
         enclosure = next(link for link in links if link.attrib["rel"] == "enclosure")
@@ -420,7 +435,9 @@ https://127.0.0.1:{port} {{
                 raise AssertionError("mismatched artifact checksum was accepted")
             except ValueError:
                 pass
-        assert request(port, context=context)[0] == 200
+        selected = f"/updchk/{ID}/Launcher?platform=windows-x64"
+        status, _, body = fetch(port, selected, context=context)
+        assert status == 200 and feed_platforms(body) == ["any", "windows-x64"]
         assert request(port, NIL, context=context)[0] == 200
         assert fetch(port, "/healthz", context=context)[0] == 404
         identities = [str(uuid.uuid4()) for _ in range(8)]
@@ -430,11 +447,12 @@ https://127.0.0.1:{port} {{
             assert database.execute("SELECT count(*) FROM installation").fetchone()[0] == 9
             assert database.execute("SELECT sum(request_count) FROM anonymous_day").fetchone()[0] == 1
         fixture.stop()
-        assert request(port, context=context)[0] == 502
+        assert fetch(port, selected, context=context)[0] == 502
         caddy_process.stop()
         caddy_process = None
         for log in (fixture.root / "daemon.log", fixture.root / "caddy.log"):
             text = log.read_text(errors="replace")
+            assert "platform=" not in text, log
             for identity in [ID, NIL, *identities]:
                 assert identity not in text, (identity, log)
         assert len(fixture.contacts()) == 11

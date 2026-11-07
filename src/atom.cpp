@@ -144,6 +144,8 @@ Result<std::string> render(const Catalog& catalog, const CheckRequest& request,
             const auto package = catalog.packages.find(key.package);
             if (package == catalog.packages.end()) return std::unexpected("invalid package reference");
             for (const auto& [platform, artifact] : build.artifacts) {
+                if (!request.platforms.empty() && platform != "any" && !std::ranges::contains(request.platforms, platform))
+                    continue;
                 std::set<std::string> tags;
                 if (conservative) {
                     for (const auto& [track, target] : catalog.tracks)

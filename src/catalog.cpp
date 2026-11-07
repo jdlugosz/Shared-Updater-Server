@@ -1,4 +1,5 @@
 #include "updater/catalog.hpp"
+#include "updater/identifier.hpp"
 #include "updater/xml.hpp"
 #include "updater/uri.hpp"
 
@@ -38,15 +39,6 @@ bool lower(char c) { return c >= 'a' && c <= 'z'; }
 bool alpha(char c) { return lower(c) || (c >= 'A' && c <= 'Z'); }
 
 bool alnum(char c) { return alpha(c) || digit(c); }
-
-bool identifier(std::string_view text, bool suite)
-{
-    if (text.empty() || !(lower(text.front()) || (!suite && digit(text.front()))))
-        return false;
-    return std::ranges::all_of(text, [](char c) {
-        return lower(c) || digit(c) || c == '-' || c == '_';
-    });
-}
 
 bool media_type(std::string_view type)
 {
@@ -173,7 +165,7 @@ std::string Loader::text(const toml::node& node, std::string_view field, std::pt
 std::string Loader::id(const toml::node& node, std::string_view field, bool suite)
 {
     auto value = text(node, field, 64);
-    if (!identifier(value, suite))
+    if (!valid_catalog_identifier(value, suite))
         invalid(node, std::format("'{}' must be a canonical lowercase identifier", field));
     return value;
 }

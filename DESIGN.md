@@ -11,7 +11,7 @@ The [database design](DATABASE.md) specifies the SQLite schema, transactions, re
 | R1 | Run as a foreground process supervised by systemd. Report readiness after catalog validation, database initialization, and listener startup. Support reload, orderly stop, restart on failure, and a progress watchdog. |
 | R2 | Read any number of catalog fragments within configured resource limits. Assemble one coherent catalog from their records. Continue serving the active revision while validating a replacement and after a rejected reload. |
 | R3 | Accept concurrent Caddy connections and serialize admitted check-in work through one FIFO worker. Bound connections, unfinished jobs, request size, and wait time. Return a busy response when admission is full. |
-| R4 | Accept an installation UUID and Application Suite ID. Return an Atom package feed with direct download and information links, build identifiers, platforms, tracks, and extension metadata. |
+| R4 | Accept an installation UUID, Application Suite ID, and optional platform IDs. Return an Atom package feed with direct download and information links, build identifiers, platforms, tracks, and extension metadata. |
 | R5 | Support the all-zero Nil UUID. Return the public feed and count anonymous requests separately from installation activity. |
 | R6 | Append each valid check-in that reaches persistence to a size-limited contact log. Keep a current file and one previous file. Update durable census summaries before returning success. |
 | R7 | Preserve first and last contact and enough dated activity to measure active installations and returns. Make retries safe for distinct-installation measures. |
@@ -24,13 +24,21 @@ The [database design](DATABASE.md) specifies the SQLite schema, transactions, re
 | --- | --- |
 | `GET /updchk/<GUID>/<suite>` for a known suite | `200`, `application/atom+xml; charset=utf-8`, and `Cache-Control: no-store`. Record a contact even if the catalog content has not changed. An empty suite has a valid empty feed. |
 | Nil UUID on the same route | Same public feed and logging path. Increment a separate anonymous daily request count. |
-| Invalid UUID, invalid suite token, query string, encoded path separator, or request body | `400`. A parser-level size violation can return `431` or close the connection if a valid response cannot be sent. |
+| Invalid UUID, invalid suite token, invalid or unsupported query parameter, percent-encoded target, or request body | `400`. A parser-level size violation can return `431` or close the connection if a valid response cannot be sent. |
 | Valid syntax with unknown suite or route | `404`. |
 | Unsupported method on the check route | `405` with `Allow: GET`. A HEAD response has no body. |
 | Admission full, expired queued job, or transient persistence failure | `503` with `Retry-After: 30` as the initial default. No feed is returned. |
 | Loopback `GET /healthz` | `200` when initialized and accepting work, otherwise `503`. Include active catalog revision and a coarse reload result for deployment checks. No census side effects or identifiers. |
 
-Accept hyphenated UUIDv4 text, with hexadecimal case ignored, plus the explicitly allowed Nil UUID. Normalize to 16 bytes and use lowercase text in the contact log. Suite IDs are ASCII tokens of 1–64 characters, beginning with a letter and continuing with letters, digits, underscores, or hyphens. ASCII case is ignored and the canonical catalog ID is lowercase. Thus `/updchk/00000000-0000-0000-0000-000000000000/Launcher` selects `launcher`. Require exactly the two path segments after the prefix. Version, platform, and track are client-side selections in v1. Reserve future protocol changes for an explicit version or negotiated feature.
+Accept hyphenated UUIDv4 text, with hexadecimal case ignored, plus the explicitly allowed Nil UUID. Normalize to 16 bytes and use lowercase text in the contact log. Suite IDs are ASCII tokens of 1–64 characters, beginning with a letter and continuing with letters, digits, underscores, or hyphens. ASCII case is ignored and the canonical catalog ID is lowercase. Thus `/updchk/00000000-0000-0000-0000-000000000000/Launcher` selects `launcher`. Require exactly the two path segments after the prefix.
+
+The optional query consists of one or more `platform=ID` parameters joined by `&`. IDs use the catalog's canonical lowercase ASCII spelling. They are 1–64 characters, begin with a letter or digit, and can contain letters, digits, underscores, and hyphens. The target limit applies to the path and query together, with a default of 256 bytes.
+
+```http
+GET /updchk/<UUID>/Launcher?platform=windows-x64-avx2&platform=windows-x64
+```
+
+An unfiltered request receives the full suite feed. A filtered request includes artifacts with a matching platform ID and all `any` artifacts. A valid unknown ID can match just the `any` artifacts, and a known suite with no eligible artifacts returns a valid empty feed. Filtered checks count by UUID and suite, including checks with an empty result. Clients select the build and track, prefer compatible variants in their own order, and check any required capabilities before installing.
 
 The daemon listens on loopback only, with `127.0.0.1:8080` as a proposed default. Caddy preserves the entire URI and terminates production HTTPS. Forward only `/updchk/*`, leave `/healthz` private, and serve installer files through Caddy's existing file routes. Disable upstream retries on the check route. Skip its access logs and filter the site's runtime error logger so the bounded daemon contact log is the deliberate identity record. Daemon operational errors use categories and request sequence numbers. [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy) · [Caddy log_skip](https://caddyserver.com/docs/caddyfile/directives/log_skip)
 

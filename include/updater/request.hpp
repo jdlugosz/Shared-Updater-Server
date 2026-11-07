@@ -8,6 +8,7 @@
 #include <functional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace updater {
 
@@ -24,6 +25,7 @@ struct Clocks {
 struct CheckRequest {
     Uuid installation_id{};
     std::string suite;
+    std::vector<std::string> platforms{}; // Empty requests all platforms.
 };
 
 struct RequestContext {
