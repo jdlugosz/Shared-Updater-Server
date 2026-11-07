@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Shared Updater Server - tests/operator_integration.py
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 """Exercise operator tools against the real daemon and private synthetic state."""
 import argparse
 from argparse import Namespace

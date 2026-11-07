@@ -1,3 +1,6 @@
+# Shared Updater Server - cmake/GenerateBuildInfo.cmake
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 cmake_minimum_required(VERSION 3.30)
 
 set(build_version "${PROJECT_VERSION}")

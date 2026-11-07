@@ -1,3 +1,6 @@
+// Shared Updater Server - tests/feed_tests.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/atom.hpp"
 #include "updater/xml.hpp"
 #include "support.hpp"

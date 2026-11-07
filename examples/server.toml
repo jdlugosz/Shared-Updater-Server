@@ -1,3 +1,6 @@
+# Shared Updater Server - examples/server.toml
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 listen = "127.0.0.1:8080"
 catalog_dir = "catalog"
 publisher_id_base = "https://dlugosz.enterprises/updater/id/"

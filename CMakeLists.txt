@@ -1,3 +1,6 @@
+# Shared Updater Server - CMakeLists.txt
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 cmake_minimum_required(VERSION 3.30)
 project(SharedUpdaterServer VERSION 0.1.0 LANGUAGES CXX)
 
@@ -88,6 +91,7 @@ target_sources(shared-updater-server PRIVATE "${build_info_source}")
 install(TARGETS shared-updater-server RUNTIME DESTINATION libexec)
 install(PROGRAMS tools/census.py tools/publish_catalog.py DESTINATION libexec/shared-updater)
 install(FILES deploy/shared-updater-server.service DESTINATION lib/systemd/system)
+install(FILES LICENCE DESTINATION share/shared-updater)
 install(DIRECTORY examples/ DESTINATION share/shared-updater/examples)
 
 if(BUILD_TESTING)

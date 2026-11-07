@@ -1,3 +1,6 @@
+// Shared Updater Server - src/atom.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/atom.hpp"
 #include "updater/uri.hpp"
 #include "updater/xml.hpp"

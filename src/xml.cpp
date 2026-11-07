@@ -1,3 +1,6 @@
+// Shared Updater Server - src/xml.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/xml.hpp"
 
 #if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)

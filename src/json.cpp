@@ -1,3 +1,6 @@
+// Shared Updater Server - src/json.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/json.hpp"
 
 namespace updater {

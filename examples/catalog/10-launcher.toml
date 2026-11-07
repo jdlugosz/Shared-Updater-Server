@@ -1,3 +1,6 @@
+# Shared Updater Server - examples/catalog/10-launcher.toml
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 [[suite]]
 id = "launcher"
 title = "Launcher"

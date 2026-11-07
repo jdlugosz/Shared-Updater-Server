@@ -1,3 +1,6 @@
+# Shared Updater Server - deploy/updater.caddy
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 # Merge the following logger definitions into the existing global options.
 {
     log default {

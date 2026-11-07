@@ -1,3 +1,6 @@
+// Shared Updater Server - tests/support.hpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #pragma once
 
 #include "updater/catalog.hpp"

@@ -1,3 +1,6 @@
+// Shared Updater Server - tests/catalog_tests.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/catalog.hpp"
 #include "updater/uri.hpp"
 

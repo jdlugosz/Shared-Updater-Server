@@ -1,3 +1,6 @@
+# Shared Updater Server - tests/version_integration.py
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 """Check executable provenance and release eligibility in a temporary Git repository."""
 
 import json

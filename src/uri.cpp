@@ -1,3 +1,6 @@
+// Shared Updater Server - src/uri.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/uri.hpp"
 
 #include <arpa/inet.h>

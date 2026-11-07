@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Shared Updater Server - tools/publish_catalog.py
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 """Publish one committed flat TOML catalog through two reusable slots."""
 import argparse
 import fcntl

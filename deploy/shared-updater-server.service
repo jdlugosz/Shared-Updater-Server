@@ -1,3 +1,6 @@
+# Shared Updater Server - deploy/shared-updater-server.service
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 [Unit]
 Description=Shared Updater catalog and census server
 After=network.target

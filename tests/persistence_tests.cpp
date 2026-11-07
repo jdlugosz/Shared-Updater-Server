@@ -1,3 +1,6 @@
+// Shared Updater Server - tests/persistence_tests.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/processor.hpp"
 #include "support.hpp"
 

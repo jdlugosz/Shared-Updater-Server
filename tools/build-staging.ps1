@@ -1,3 +1,6 @@
+# Shared Updater Server - tools/build-staging.ps1
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 [CmdletBinding()]
 param(
     [ValidatePattern('^[a-zA-Z0-9_.-]+$')]

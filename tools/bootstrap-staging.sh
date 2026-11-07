@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Shared Updater Server - tools/bootstrap-staging.sh
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 set -euo pipefail
 
 if [[ $(id -u) -ne 0 || $(hostname -s) != vps-stage ]]; then

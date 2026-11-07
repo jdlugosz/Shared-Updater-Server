@@ -1,3 +1,6 @@
+// Shared Updater Server - src/contact_log.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/persistence.hpp"
 
 #include <cerrno>

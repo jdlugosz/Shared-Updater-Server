@@ -1,3 +1,6 @@
+// Shared Updater Server - tests/config_tests.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/config.hpp"
 #include "updater/json.hpp"
 #include "support.hpp"

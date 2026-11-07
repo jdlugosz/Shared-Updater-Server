@@ -1,3 +1,6 @@
+// Shared Updater Server - src/request.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/request.hpp"
 #include "updater/identifier.hpp"
 

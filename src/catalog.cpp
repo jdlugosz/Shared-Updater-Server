@@ -1,3 +1,6 @@
+// Shared Updater Server - src/catalog.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/catalog.hpp"
 #include "updater/identifier.hpp"
 #include "updater/xml.hpp"
@@ -32,12 +35,10 @@ constexpr auto atom_namespace = "http://www.w3.org/2005/Atom"sv;
 constexpr auto xml_namespace = "http://www.w3.org/XML/1998/namespace"sv;
 constexpr auto xmlns_namespace = "http://www.w3.org/2000/xmlns/"sv;
 
+// helpers for media_type
 bool digit(char c) { return c >= '0' && c <= '9'; }
-
 bool lower(char c) { return c >= 'a' && c <= 'z'; }
-
 bool alpha(char c) { return lower(c) || (c >= 'A' && c <= 'Z'); }
-
 bool alnum(char c) { return alpha(c) || digit(c); }
 
 bool media_type(std::string_view type)

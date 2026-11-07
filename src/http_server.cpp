@@ -1,3 +1,6 @@
+// Shared Updater Server - src/http_server.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/http_server.hpp"
 #include "updater/json.hpp"
 

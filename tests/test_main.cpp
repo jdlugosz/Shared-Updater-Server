@@ -1,3 +1,6 @@
+// Shared Updater Server - tests/test_main.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include <catch2/catch_test_macros.hpp>
 #include <sqlite3.h>
 #include <toml++/toml.hpp>

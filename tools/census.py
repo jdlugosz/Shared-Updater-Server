@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Shared Updater Server - tools/census.py
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 """Consistent census backups and reports from a private local snapshot."""
 import argparse
 from contextlib import closing

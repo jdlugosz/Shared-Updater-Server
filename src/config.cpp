@@ -1,3 +1,6 @@
+// Shared Updater Server - src/config.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/config.hpp"
 
 #include <toml++/toml.hpp>

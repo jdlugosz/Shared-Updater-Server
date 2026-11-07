@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Shared Updater Server - tests/systemd_integration.py
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 """Root-only, isolated service acceptance on VPS Local; never modifies the live Caddy service."""
 import argparse
 import concurrent.futures

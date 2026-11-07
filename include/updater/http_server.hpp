@@ -1,3 +1,6 @@
+// Shared Updater Server - include/updater/http_server.hpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #pragma once
 
 #include "updater/worker.hpp"

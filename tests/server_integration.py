@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Shared Updater Server - tests/server_integration.py
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 """Exercise the built daemon through real TCP, real SQLite, and optionally Caddy."""
 import argparse
 import concurrent.futures

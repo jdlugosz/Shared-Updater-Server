@@ -1,3 +1,6 @@
+# Shared Updater Server - examples/catalog/00-catalog.toml
+# <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 [catalog]
 schema_version = 1
 revision = "example-001"

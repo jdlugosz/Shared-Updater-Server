@@ -1,3 +1,6 @@
+// Shared Updater Server - tests/worker_tests.cpp
+// <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
+
 #include "updater/worker.hpp"
 #include "support.hpp"
 
