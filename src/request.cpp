@@ -11,8 +11,8 @@ std::expected<CheckRequest, RouteError> parse_check_target(std::string_view targ
     target.remove_prefix(prefix.size());
     const auto slash = target.find('/');
     if (slash == target.npos) return std::unexpected(RouteError::invalid);
-    const auto id = parse_uuid(target.substr(0, slash));
-    auto suite = target.substr(slash + 1);
+    const auto id = parse_uuid(target.subview(0, slash));
+    auto suite = target.subview(slash + 1);
     if (!id || suite.empty() || suite.size() > 64) return std::unexpected(RouteError::invalid);
     const auto letter = [](char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); };
     if (!letter(suite.front())) return std::unexpected(RouteError::invalid);

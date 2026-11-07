@@ -5,6 +5,7 @@
 #if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
 import std;
 #else
+#include <format>
 #include <iostream>
 #include <stdexcept>
 #endif
@@ -59,7 +60,7 @@ int main(int argc, char** argv)
             return 0;
         }
         if (feed_mode) {
-            auto request = parse_check_target("/updchk/" + id + "/" + suite);
+            auto request = parse_check_target(std::format("/updchk/{}/{}", id, suite));
             if (!request) throw std::runtime_error("invalid feed request");
             auto feed = render_feed(**catalog, *request, config->feed);
             if (!feed) throw std::runtime_error(feed.error());

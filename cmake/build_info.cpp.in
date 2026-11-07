@@ -10,14 +10,14 @@ static_assert(report.size() == @report_size@);
 } // namespace
 
 constexpr BuildInfo build_info{
-    .version = report.substr(@version_slice@),
-    .status = report.substr(@status_slice@),
-    .configuration = report.substr(@configuration_slice@),
-    .variant = report.substr(@variant_slice@),
-    .date = report.substr(@date_slice@),
-    .git_commit = report.substr(@git_commit_slice@),
-    .git_tree = report.substr(@git_tree_slice@),
-    .git_tag = report.substr(@git_tag_slice@),
+    .version = report.subview(@version_slice@),
+    .status = report.subview(@status_slice@),
+    .configuration = report.subview(@configuration_slice@),
+    .variant = report.subview(@variant_slice@),
+    .date = report.subview(@date_slice@),
+    .git_commit = report.subview(@git_commit_slice@),
+    .git_tree = report.subview(@git_tree_slice@),
+    .git_tag = report.subview(@git_tag_slice@),
     .report = report,
 };
 

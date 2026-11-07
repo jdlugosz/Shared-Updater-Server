@@ -13,6 +13,7 @@ std::string json_quote(std::string_view text)
             result += hex[c & 15];
         } else result += static_cast<char>(c);
     }
-    return result + '"';
+    result += '"';
+    return result;
 }
 }

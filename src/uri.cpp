@@ -34,7 +34,7 @@ bool host_name(std::string_view host)
     if (host.empty() || host.size() > 253 || host.ends_with('.')) return false;
     for (;;) {
         const auto dot = host.find('.');
-        const auto label = host.substr(0, dot);
+        const auto label = host.subview(0, dot);
         if (label.empty() || label.size() > 63 || !alnum(label.front()) || !alnum(label.back())
             || !std::ranges::all_of(label, [](char c) { return alnum(c) || c == '-'; }))
             return false;
@@ -48,20 +48,20 @@ bool host_name(std::string_view host)
 bool valid_https_url(std::string_view url)
 {
     constexpr auto scheme = "https://"sv;
-    if (url.size() < scheme.size() || !std::ranges::equal(url.substr(0, scheme.size()),
+    if (url.size() < scheme.size() || !std::ranges::equal(url.subview(0, scheme.size()),
             scheme, [](char a, char b) {
                 return a == b || (a >= 'A' && a <= 'Z' && a - 'A' + 'a' == b);
             }))
         return false;
     url.remove_prefix(scheme.size());
     const auto end = url.find_first_of("/?#");
-    auto authority = url.substr(0, end);
+    auto authority = url.subview(0, end);
     if (authority.empty() || authority.contains('@')) return false;
 
     if (authority.starts_with('[')) {
         const auto close = authority.find(']');
         if (close == authority.npos) return false;
-        const auto literal = authority.substr(1, close - 1);
+        const auto literal = authority.subview(1, close - 1);
         if (literal.contains('\0')) return false;
         const std::string ip(literal);
         in6_addr address{};
@@ -69,7 +69,7 @@ bool valid_https_url(std::string_view url)
         authority.remove_prefix(close + 1);
     } else {
         const auto colon = authority.find(':');
-        if (!host_name(authority.substr(0, colon))) return false;
+        if (!host_name(authority.subview(0, colon))) return false;
         authority.remove_prefix(colon == authority.npos ? authority.size() : colon);
     }
     if (!authority.empty()) {

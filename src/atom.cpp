@@ -131,7 +131,7 @@ Result<std::string> render(const Catalog& catalog, const CheckRequest& request,
         out.start("feed");
         out.attribute("xmlns", atom_namespace);
         out.attribute("xmlns:upd", updater_namespace);
-        out.element("id", options.publisher_id_base + "suites/" + request.suite);
+        out.element("id", std::format("{}suites/{}", options.publisher_id_base, request.suite));
         out.element("title", suite->second.title);
         out.element("updated", timestamp_string(catalog.header.published_at));
         out.start("author");
@@ -158,9 +158,9 @@ Result<std::string> render(const Catalog& catalog, const CheckRequest& request,
                 }
                 if (!conservative && build.visibility == Visibility::targeted && tags.empty()) continue;
                 out.start("entry");
-                out.element("id", options.publisher_id_base + "packages/" + key.package
-                    + "/builds/" + key.id + "/artifacts/" + platform);
-                out.element("title", package->second.title + " " + build.version + " (" + platform + ")");
+                out.element("id", std::format("{}packages/{}/builds/{}/artifacts/{}",
+                                              options.publisher_id_base, key.package, key.id, platform));
+                out.element("title", std::format("{} {} ({})", package->second.title, build.version, platform));
                 out.element("updated", timestamp_string(catalog.header.published_at));
                 out.element("published", timestamp_string(build.published_at));
                 out.start("link");
@@ -209,9 +209,11 @@ std::string timestamp_string(const Timestamp& timestamp)
     if (timestamp.fraction != nanoseconds::zero()) {
         auto fraction = std::format("{:09}", timestamp.fraction.count());
         while (fraction.ends_with('0')) fraction.pop_back();
-        result += "." + fraction;
+        result += '.';
+        result += fraction;
     }
-    return result + "Z";
+    result += 'Z';
+    return result;
 }
 
 Result<std::string> render_feed(const Catalog& catalog, const CheckRequest& request, const FeedOptions& options)
@@ -229,7 +231,7 @@ Result<void> preflight_feeds(const Catalog& catalog, const FeedOptions& options)
         return std::unexpected(checked.error());
     for (const auto& suite : catalog.suites.keys())
         if (auto checked = render(catalog, {nil_uuid, suite}, options, true); !checked)
-            return std::unexpected("suite '" + suite + "': " + checked.error());
+            return std::unexpected(std::format("suite '{}': {}", suite, checked.error()));
     return {};
 }
 

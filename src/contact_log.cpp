@@ -17,7 +17,7 @@ import std;
 namespace updater {
 namespace {
 
-std::string failure(std::string_view operation) { return std::string(operation) + ": " + std::strerror(errno); }
+std::string failure(std::string_view operation) { return std::format("{}: {}", operation, std::strerror(errno)); }
 
 class Fd {
 public:
@@ -60,7 +60,7 @@ Result<void> check_file(int directory, const char* name, std::ptrdiff_t limit, b
 Result<std::string> contact_line(const CheckRequest& request, WallTime observed_at)
 {
     const auto id = uuid_string(request.installation_id);
-    const auto target = "/updchk/" + id + "/" + request.suite;
+    const auto target = std::format("/updchk/{}/{}", id, request.suite);
     const auto validated = parse_check_target(target);
     if (!validated || validated->suite != request.suite || observed_at.time_since_epoch().count() < 0)
         return std::unexpected("invalid contact");

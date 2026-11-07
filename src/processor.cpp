@@ -1,5 +1,11 @@
 #include "updater/processor.hpp"
 
+#if defined(UPDATER_USE_STD_MODULE) && !defined(__INTELLISENSE__)
+import std;
+#else
+#include <format>
+#endif
+
 namespace updater {
 
 CheckProcessor::CheckProcessor(std::unique_ptr<const Catalog> catalog, FeedOptions options,
@@ -39,11 +45,11 @@ Result<void> CheckProcessor::activate(std::unique_ptr<const Catalog> candidate)
         const auto found = candidate->builds.find(key);
         if (found == candidate->builds.end()) continue;
         if (found->second.version != old.version || found->second.published_at != old.published_at)
-            return std::unexpected("immutable build identity changed: " + key.package + "/" + key.id);
+            return std::unexpected(std::format("immutable build identity changed: {}/{}", key.package, key.id));
         for (const auto& [platform, artifact] : old.artifacts) {
             const auto next = found->second.artifacts.find(platform);
             if (next != found->second.artifacts.end() && next->second != artifact)
-                return std::unexpected("immutable artifact changed: " + key.package + "/" + key.id + "/" + platform);
+                return std::unexpected(std::format("immutable artifact changed: {}/{}/{}", key.package, key.id, platform));
         }
     }
     if (auto registered = census_->register_suites(*candidate); !registered) return registered;

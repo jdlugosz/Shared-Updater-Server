@@ -29,7 +29,7 @@ void keys(const toml::table& table, std::initializer_list<std::string_view> know
 {
     for (const auto& [key, value] : table)
         if (!std::ranges::contains(known, key.str()))
-            invalid(value, "unknown configuration key '" + std::string(key.str()) + "'");
+            invalid(value, std::format("unknown configuration key '{}'", key.str()));
 }
 
 std::string string(const toml::node& node)
@@ -83,16 +83,16 @@ Result<ServerConfig> read_server_config(const std::filesystem::path& file)
             const auto value = string(*listen);
             const auto colon = value.rfind(':');
             if (colon == value.npos) invalid(*listen, "listen needs address:port");
-            auto address = value.substr(0, colon);
-            if (address.starts_with('[') && address.ends_with(']')) address = address.substr(1, address.size() - 2);
+            auto address = value.subview(0, colon);
+            if (address.starts_with('[') && address.ends_with(']')) address = address.subview(1, address.size() - 2);
+            config.http.address = address;
             boost::system::error_code ec;
-            const auto parsed = boost::asio::ip::make_address(address, ec);
+            const auto parsed = boost::asio::ip::make_address(config.http.address, ec);
             if (ec || !parsed.is_loopback()) invalid(*listen, "listen must be a numeric loopback address");
             unsigned port{};
             const auto [end, status] = std::from_chars(value.data() + colon + 1, value.data() + value.size(), port);
             if (status != std::errc{} || end != value.data() + value.size() || port > 65535)
                 invalid(*listen, "invalid listener port");
-            config.http.address = std::move(address);
             config.http.port = static_cast<std::uint16_t>(port);
         }
         if (root.contains("catalog_dir") == root.contains("catalog_files"))
@@ -150,7 +150,7 @@ Result<ServerConfig> read_server_config(const std::filesystem::path& file)
         return std::unexpected(std::format("{}:{}: {}", file.string(), error.source().begin.line,
                                            error.description()));
     } catch (const ConfigError& error) {
-        return std::unexpected(file.string() + ":" + error.what());
+        return std::unexpected(std::format("{}:{}", file.string(), error.what()));
     } catch (const std::filesystem::filesystem_error& error) { return std::unexpected(error.what()); }
 }
 
@@ -161,7 +161,10 @@ Result<std::unique_ptr<const Catalog>> prepare_catalog(const ServerConfig& confi
         : load_catalog_directory(config.catalog_directory, config.catalog_budget);
     if (!loaded) {
         std::string diagnostics;
-        for (const auto& diagnostic : loaded.error()) diagnostics += format_diagnostic(diagnostic) + "\n";
+        for (const auto& diagnostic : loaded.error()) {
+            diagnostics += format_diagnostic(diagnostic);
+            diagnostics += '\n';
+        }
         return std::unexpected(std::move(diagnostics));
     }
     if (auto checked = preflight_feeds(**loaded, config.feed); !checked)

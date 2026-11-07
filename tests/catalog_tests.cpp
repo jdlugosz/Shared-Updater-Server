@@ -9,6 +9,7 @@ import std;
 #include <algorithm>
 #include <format>
 #include <fstream>
+#include <iterator>
 #include <limits>
 #include <stdexcept>
 #include <string_view>
@@ -84,7 +85,7 @@ public:
         const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
         for (unsigned n = 0; n < 100; ++n) {
             auto candidate = fs::temp_directory_path() /
-                ("updater-catalog-test-" + std::to_string(stamp) + "-" + std::to_string(n));
+                std::format("updater-catalog-test-{}-{}", stamp, n);
             if (fs::create_directory(candidate)) {
                 root = std::move(candidate);
                 return;
@@ -140,7 +141,10 @@ void require_error(const CatalogLoad& result, DiagnosticKind kind, std::string_v
     REQUIRE_FALSE(result.has_value());
     INFO([&] {
         std::string combined;
-        for (const auto& item : result.error()) combined += format_diagnostic(item) + "\n";
+        for (const auto& item : result.error()) {
+            combined += format_diagnostic(item);
+            combined += '\n';
+        }
         return combined;
     }());
     REQUIRE(std::ranges::any_of(result.error(), [&](const auto& item) {
@@ -207,7 +211,7 @@ TEST_CASE("Catalog keeps keys paired with their values after gathering unordered
     Fixture fixture;
     std::vector<fs::path> files;
     for (const auto label : {"zulu", "mike", "alpha"}) {
-        files.push_back(fixture.write(std::string(label) + ".toml", std::format(R"(
+        files.push_back(fixture.write(std::format("{}.toml", label), std::format(R"(
 [[suite]]
 id = "suite-{0}"
 title = "Suite {0}"
@@ -266,9 +270,9 @@ build = "build-{0}"
         const auto& selected_build = catalog.builds.at({package_id, build_id});
         REQUIRE(selected_build.version == label);
         REQUIRE(selected_build.artifacts.begin()->first == "linux-x64");
-        REQUIRE(selected_build.artifacts.at("linux-x64").url == "https://example.invalid/" + label + "/linux");
+        REQUIRE(selected_build.artifacts.at("linux-x64").url == std::format("https://example.invalid/{}/linux", label));
         REQUIRE(selected_build.artifacts.at("linux-x64").size == 22);
-        REQUIRE(selected_build.artifacts.at("windows-x64").url == "https://example.invalid/" + label + "/windows");
+        REQUIRE(selected_build.artifacts.at("windows-x64").url == std::format("https://example.invalid/{}/windows", label));
         REQUIRE(selected_build.artifacts.at("windows-x64").size == 11);
         REQUIRE(catalog.tracks.at({suite_id, package_id, "current", "windows-x64", {}}) == build_id);
     }
@@ -302,13 +306,13 @@ TEST_CASE("Success report matches the requested example for a real catalog", "[c
     Fixture fixture;
     fixture.valid();
     for (unsigned i = 0; i < 48; ++i)
-        fixture.write("extra-" + std::to_string(i) + ".toml", "#\n");
+        fixture.write(std::format("extra-{}.toml", i), "#\n");
     constexpr std::ptrdiff_t total = 81 * 1024;
     const auto used = std::ssize(header) + std::ssize(suite) + std::ssize(package)
         + std::ssize(build) + std::ssize(track) + 48 * 2;
     const auto padding = total - used;
-    fixture.write("00-catalog.toml", std::string(header) + "\n#"
-        + std::string(static_cast<std::size_t>(padding - 3), ' ') + "\n");
+    fixture.write("00-catalog.toml",
+                  std::format("{}\n#{}\n", header, std::string(static_cast<std::size_t>(padding - 3), ' ')));
     const auto loaded = fixture.load();
     REQUIRE(loaded.has_value());
     REQUIRE((*loaded)->usage.bytes == total);
@@ -328,8 +332,9 @@ TEST_CASE("Success reports round partial kiBytes upward", "[catalog]")
         total = 1025;
         expected = "Success. 1/4 fragments, 2/2 kiBytes read.";
     }
-    fixture.write("catalog.toml", std::string(header) + "\n#"
-        + std::string(static_cast<std::size_t>(total - std::ssize(header) - 3), ' ') + "\n");
+    fixture.write("catalog.toml",
+                  std::format("{}\n#{}\n", header,
+                              std::string(static_cast<std::size_t>(total - std::ssize(header) - 3), ' ')));
     const auto loaded = fixture.load({.bytes = total, .fragments = 4});
     REQUIRE(loaded.has_value());
     REQUIRE((*loaded)->usage.bytes == total);
@@ -343,8 +348,8 @@ TEST_CASE("Success reporting handles zero and maximum signed byte counts", "[cat
     const auto maximum = std::numeric_limits<std::ptrdiff_t>::max();
     catalog.usage = {.bytes = maximum, .fragments = 1};
     catalog.limits = catalog.usage;
-    const auto rounded = std::to_string(maximum / 1024 + 1);
-    REQUIRE(format_success(catalog) == "Success. 1/1 fragments, " + rounded + "/" + rounded + " kiBytes read.");
+    const auto rounded = maximum / 1024 + 1;
+    REQUIRE(format_success(catalog) == std::format("Success. 1/1 fragments, {0}/{0} kiBytes read.", rounded));
 }
 
 TEST_CASE("A directory selector can point at a deployment slot", "[catalog]")
@@ -376,9 +381,9 @@ TEST_CASE("Suites can share a package with multiple platform artifacts", "[catal
     fixture.write("11-other.toml", replaced(suite, "id = \"launcher\"", "id = 'other'"));
     const auto artifact_start = build.find("[[build.artifact]]");
     const auto artifact_end = build.find("[[build.extension]]");
-    const auto arm = replaced(build.substr(artifact_start, artifact_end - artifact_start),
+    const auto arm = replaced(build.subview(artifact_start, artifact_end - artifact_start),
                               "windows-x64", "windows-arm64");
-    fixture.write("30-build.toml", std::string(build) + arm);
+    fixture.write("30-build.toml", std::format("{}{}", build, arm));
     auto arm_track = replaced(track, "suite = \"launcher\"", "suite = 'other'");
     arm_track = replaced(arm_track, "windows-x64", "windows-arm64");
     fixture.write("41-track.toml", arm_track);
@@ -396,7 +401,7 @@ TEST_CASE("Targeted assignments coexist with public tracks", "[catalog]")
     auto targeted_build = replaced(build, "id = \"build-001\"", "id = \"build-002\"\nvisibility = \"targeted\"");
     fixture.write("31-target-build.toml", targeted_build);
     auto targeted_track = replaced(track, "build = \"build-001\"", "build = \"build-002\"");
-    targeted_track += std::string("installation_id = \"") + targeted_id + "\"\n";
+    targeted_track += std::format("installation_id = \"{}\"\n", targeted_id);
     fixture.write("41-target-track.toml", targeted_track);
     const auto loaded = fixture.load();
     if (!loaded) FAIL(format_diagnostic(loaded.error().front()));
@@ -452,9 +457,9 @@ TEST_CASE("Duplicates in arrays and nested artifact records are rejected", "[cat
         require_error(fixture.load(), DiagnosticKind::duplicate, "in 'requires'");
     }
     SECTION("platform artifact") {
-        const auto artifact = build.substr(build.find("[[build.artifact]]"),
+        const auto artifact = build.subview(build.find("[[build.artifact]]"),
             build.find("[[build.extension]]") - build.find("[[build.artifact]]"));
-        fixture.write("30-build.toml", std::string(build) + std::string(artifact));
+        fixture.write("30-build.toml", std::format("{}{}", build, artifact));
         require_error(fixture.load(), DiagnosticKind::duplicate, "artifact platform");
     }
 }
@@ -566,7 +571,7 @@ TEST_CASE("Artifacts must have validated transport metadata", "[catalog]")
     Fixture fixture;
     fixture.valid();
     SECTION("missing artifacts") {
-        fixture.write("30-build.toml", build.substr(0, build.find("[[build.artifact]]")));
+        fixture.write("30-build.toml", build.subview(0, build.find("[[build.artifact]]")));
         require_error(fixture.load(), DiagnosticKind::schema, "requires at least one artifact");
     }
     SECTION("negative size") {
@@ -626,15 +631,15 @@ TEST_CASE("Extension data must be valid XML and must not collide", "[catalog]")
         require_error(fixture.load(), DiagnosticKind::schema, "reserved namespace");
     }
     SECTION("global and scoped extensions overlap") {
-        auto entry = std::string(build.substr(build.find("[[build.extension]]")));
+        auto entry = std::string(build.subview(build.find("[[build.extension]]")));
         entry.erase(entry.find("suite = "));
-        fixture.write("30-build.toml", std::string(build) + entry);
+        fixture.write("30-build.toml", std::format("{}{}", build, entry));
         require_error(fixture.load(), DiagnosticKind::duplicate, "overlapping suite view");
     }
     SECTION("separate suite views can reuse a name") {
         fixture.write("11-other.toml", replaced(suite, "id = \"launcher\"", "id = 'other'"));
-        auto entry = replaced(build.substr(build.find("[[build.extension]]")), "suite = \"launcher\"", "suite = 'other'");
-        fixture.write("30-build.toml", std::string(build) + entry);
+        auto entry = replaced(build.subview(build.find("[[build.extension]]")), "suite = \"launcher\"", "suite = 'other'");
+        fixture.write("30-build.toml", std::format("{}{}", build, entry));
         REQUIRE(fixture.load().has_value());
     }
 }
@@ -648,13 +653,13 @@ TEST_CASE("Target UUIDs are version 4 and compare by bytes", "[catalog]")
                                "12345678-1234-4234-7234-1234567890ab", "12345678-1234-4234-8234-1234567890a-",
                                "123456781234423482341234567890ab"}) {
             CAPTURE(id);
-            fixture.write("40-track.toml", std::string(track) + "installation_id = '" + id + "'\n");
+            fixture.write("40-track.toml", std::format("{}installation_id = '{}'\n", track, id));
             require_error(fixture.load(), DiagnosticKind::schema, "non-Nil UUIDv4");
         }
     }
     SECTION("same ID in different hexadecimal case") {
-        fixture.write("41-track.toml", std::string(track) + "installation_id = '12345678-1234-4234-8234-1234567890ab'\n");
-        fixture.write("42-track.toml", std::string(track) + "installation_id = '" + targeted_id + "'\n");
+        fixture.write("41-track.toml", std::format("{}installation_id = '12345678-1234-4234-8234-1234567890ab'\n", track));
+        fixture.write("42-track.toml", std::format("{}installation_id = '{}'\n", track, targeted_id));
         require_error(fixture.load(), DiagnosticKind::duplicate, "targeted");
     }
 }
@@ -682,7 +687,7 @@ TEST_CASE("Gathering reports missing input, invalid entries and resource limits"
     }
     SECTION("combined byte budget includes every fragment") {
         fixture.write("catalog.toml", header);
-        const auto extra = "#" + std::string(20000, ' ') + "\n";
+        const auto extra = std::format("#{}\n", std::string(20000, ' '));
         fixture.write("second.toml", extra);
         const auto bytes = std::ssize(header) + std::ssize(extra);
         REQUIRE(fixture.load({.bytes = bytes, .fragments = 2}).has_value());
@@ -731,7 +736,7 @@ TEST_CASE("A malformed catalog has bounded diagnostics", "[catalog]")
     fixture.valid();
     std::string extra;
     for (unsigned n = 0; n < 150; ++n)
-        extra += "unknown_" + std::to_string(n) + " = 1\n";
+        std::format_to(std::back_inserter(extra), "unknown_{} = 1\n", n);
     fixture.write("50-unknown.toml", extra);
     const auto loaded = fixture.load();
     require_error(loaded, DiagnosticKind::limit, "further catalog diagnostics omitted");

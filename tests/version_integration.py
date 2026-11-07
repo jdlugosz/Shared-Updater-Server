@@ -17,7 +17,7 @@ def read_info(generated):
     source = generated.read_text(encoding="utf-8")
     literal = re.search(r'^constexpr std::string_view report = ("(?:[^"\\]|\\.)*");$', source, flags=re.M)
     report = json.loads(literal[1]).encode("utf-8")
-    fields = re.findall(r"^    \.(\w+) = report\.substr\((\d+), (\d+)\),$", source, flags=re.M)
+    fields = re.findall(r"^    \.(\w+) = report\.subview\((\d+), (\d+)\),$", source, flags=re.M)
     return {name: report[int(offset):int(offset) + int(length)].decode("utf-8")
             for name, offset, length in fields}
 

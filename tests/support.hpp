@@ -3,6 +3,7 @@
 #include "updater/catalog.hpp"
 
 #include <atomic>
+#include <format>
 #include <fstream>
 #include <stdexcept>
 #include <string_view>
@@ -45,7 +46,7 @@ public:
         static std::atomic<unsigned> sequence{};
         const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
         root = std::filesystem::temp_directory_path()
-            / ("updater-test-" + std::to_string(stamp) + "-" + std::to_string(sequence++));
+            / std::format("updater-test-{}-{}", stamp, sequence++);
         if (!std::filesystem::create_directory(root)) throw std::runtime_error("test directory exists");
     }
 

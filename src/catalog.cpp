@@ -56,7 +56,7 @@ bool media_type(std::string_view type)
             return alnum(c) || c == '`' || "!#$%&'*+-.^_|~"sv.contains(c);
         });
     };
-    return slash != type.npos && token(type.substr(0, slash)) && token(type.substr(slash + 1));
+    return slash != type.npos && token(type.subview(0, slash)) && token(type.subview(slash + 1));
 }
 
 SourceLocation at(const toml::source_region& region)
@@ -149,25 +149,24 @@ void Loader::keys(const toml::table& table, std::initializer_list<std::string_vi
 {
     for (const auto& [key, value] : table) {
         if (!std::ranges::contains(allowed, key.str()))
-            report(DiagnosticKind::schema, at(key.source()), "unknown field '" + std::string(key.str()) + "'");
+            report(DiagnosticKind::schema, at(key.source()), std::format("unknown field '{}'", key.str()));
     }
 }
 
 const toml::node& Loader::required(const toml::table& table, std::string_view field)
 {
     if (const auto* value = table.get(field)) return *value;
-    invalid(table, "missing required field '" + std::string(field) + "'");
+    invalid(table, std::format("missing required field '{}'", field));
 }
 
 std::string Loader::text(const toml::node& node, std::string_view field, std::ptrdiff_t limit, bool empty)
 {
-    const auto name = "'" + std::string(field) + "'";
     const auto* value = node.as_string();
-    if (!value) invalid(node, name + " must be a string");
+    if (!value) invalid(node, std::format("'{}' must be a string", field));
     const auto& str = value->get();
-    if (!empty && str.empty()) invalid(node, name + " must not be empty");
-    if (std::ssize(str) > limit) invalid(node, name + " exceeds " + std::to_string(limit) + " bytes");
-    if (!xml::valid_text(str)) invalid(node, name + " contains text that XML 1.0 cannot represent");
+    if (!empty && str.empty()) invalid(node, std::format("'{}' must not be empty", field));
+    if (std::ssize(str) > limit) invalid(node, std::format("'{}' exceeds {} bytes", field, limit));
+    if (!xml::valid_text(str)) invalid(node, std::format("'{}' contains text that XML 1.0 cannot represent", field));
     return str;
 }
 
@@ -175,7 +174,7 @@ std::string Loader::id(const toml::node& node, std::string_view field, bool suit
 {
     auto value = text(node, field, 64);
     if (!identifier(value, suite))
-        invalid(node, "'" + std::string(field) + "' must be a canonical lowercase identifier");
+        invalid(node, std::format("'{}' must be a canonical lowercase identifier", field));
     return value;
 }
 
@@ -183,14 +182,14 @@ std::string Loader::link(const toml::table& table, std::string_view field)
 {
     const auto& node = required(table, field);
     auto value = text(node, field, 2048);
-    if (!valid_https_url(value)) invalid(node, "'" + std::string(field) + "' must be an absolute HTTPS URL");
+    if (!valid_https_url(value)) invalid(node, std::format("'{}' must be an absolute HTTPS URL", field));
     return value;
 }
 
 std::int64_t Loader::integer(const toml::node& node, std::string_view field)
 {
     if (const auto* value = node.as_integer()) return value->get();
-    invalid(node, "'" + std::string(field) + "' must be an integer");
+    invalid(node, std::format("'{}' must be an integer", field));
 }
 
 Timestamp Loader::timestamp(const toml::table& table, std::string_view field)
@@ -199,17 +198,17 @@ Timestamp Loader::timestamp(const toml::table& table, std::string_view field)
     const auto& node = required(table, field);
     const auto* value = node.as_date_time();
     if (!value || !value->get().offset)
-        invalid(node, "'" + std::string(field) + "' must be an offset-aware TOML timestamp");
+        invalid(node, std::format("'{}' must be an offset-aware TOML timestamp", field));
     const auto& stamp = value->get();
     const auto date = year(stamp.date.year) / month(stamp.date.month) / day(stamp.date.day);
     if (!date.ok() || stamp.time.second > 59 || stamp.time.minute > 59 || stamp.time.hour > 23
         || stamp.time.nanosecond >= 1'000'000'000)
-        invalid(node, "'" + std::string(field) + "' has an invalid date or time");
+        invalid(node, std::format("'{}' has an invalid date or time", field));
     const auto utc = sys_days(date) + hours(stamp.time.hour) + minutes(stamp.time.minute)
                    + seconds(stamp.time.second) - minutes(stamp.offset->minutes);
     const auto utc_year = int(year_month_day(floor<days>(utc)).year());
     if (utc_year < 1 || utc_year > 9999)
-        invalid(node, "'" + std::string(field) + "' is outside the supported UTC date range");
+        invalid(node, std::format("'{}' is outside the supported UTC date range", field));
     return {utc, nanoseconds(stamp.time.nanosecond)};
 }
 
@@ -226,11 +225,11 @@ bool Loader::define(Map& map, Key key, Value value, const toml::node& node, std:
 std::vector<std::string> Loader::ids(const toml::node& node, std::string_view field)
 {
     const auto* values = node.as_array();
-    if (!values) invalid(node, "'" + std::string(field) + "' must be an array of identifiers");
+    if (!values) invalid(node, std::format("'{}' must be an array of identifiers", field));
     std::map<std::string, Defined<bool>, std::less<>> unique;
     for (const auto& value : *values) {
         auto name = id(value, field);
-        define(unique, name, true, value, "'" + name + "' in '" + std::string(field) + "'");
+        define(unique, name, true, value, std::format("'{}' in '{}'", name, field));
     }
     return unique | std::views::keys | std::ranges::to<std::vector>();
 }
@@ -243,13 +242,13 @@ void Loader::records(const toml::table& table, std::string_view field, Read read
     const auto* array = value->as_array();
     if (!array) {
         report(DiagnosticKind::schema, at(value->source()),
-               "'" + std::string(field) + "' must be an array of tables");
+               std::format("'{}' must be an array of tables", field));
         return;
     }
     for (const auto& item : *array) {
         try {
             const auto* record = item.as_table();
-            if (!record) invalid(item, "'" + std::string(field) + "' entries must be tables");
+            if (!record) invalid(item, std::format("'{}' entries must be tables", field));
             read(*record);
         } catch (const InvalidRecord&) {
             // Keep diagnosing other records and files.
@@ -268,7 +267,7 @@ void Loader::read_header(const toml::node& node)
     keys(*table, {"schema_version", "revision", "published_at", "author"});
     const auto& version = required(*table, "schema_version");
     const auto major = integer(version, "schema_version");
-    if (major != 1) invalid(version, "unsupported catalog schema version " + std::to_string(major));
+    if (major != 1) invalid(version, std::format("unsupported catalog schema version {}", major));
     header_ = Defined<CatalogHeader>{
         {major, text(required(*table, "revision"), "revision", 128),
          timestamp(*table, "published_at"), text(required(*table, "author"), "author", 512)},
@@ -281,7 +280,7 @@ void Loader::read_suite(const toml::table& table)
     const auto& key = required(table, "id");
     const auto name = id(key, "id", true);
     Suite suite{text(required(table, "title"), "title", 512), ids(required(table, "packages"), "packages")};
-    define(suites_, name, std::move(suite), key, "suite '" + name + "'");
+    define(suites_, name, std::move(suite), key, std::format("suite '{}'", name));
 }
 
 void Loader::read_package(const toml::table& table)
@@ -290,7 +289,7 @@ void Loader::read_package(const toml::table& table)
     const auto& key = required(table, "id");
     const auto name = id(key, "id");
     Package package{text(required(table, "title"), "title", 512), id(required(table, "kind"), "kind")};
-    define(packages_, name, std::move(package), key, "package '" + name + "'");
+    define(packages_, name, std::move(package), key, std::format("package '{}'", name));
 }
 
 void Loader::read_build(const toml::table& table)
@@ -323,7 +322,7 @@ void Loader::read_build(const toml::table& table)
         const auto digest = parse_sha256(text(hash_field, "sha256", 64));
         if (!digest) invalid(hash_field, "'sha256' must have 64 hexadecimal digits");
         Artifact artifact{link(entry, "url"), std::move(media), static_cast<std::uint64_t>(size), *digest};
-        define(artifacts, platform, std::move(artifact), platform_field, "artifact platform '" + platform + "'");
+        define(artifacts, platform, std::move(artifact), platform_field, std::format("artifact platform '{}'", platform));
     });
     if (artifacts.empty()) report(DiagnosticKind::schema, at(table.source()), "build requires at least one artifact");
     build.artifacts = take_values(artifacts);
@@ -353,8 +352,8 @@ void Loader::read_build(const toml::table& table)
             if (overlap == registered.end()) overlap = registered.find(extension.suite);
         }
         if (overlap != registered.end()) {
-            report(DiagnosticKind::duplicate, at(name_field.source()), "duplicate extension '" + name
-                + "' in an overlapping suite view", overlap->second);
+            report(DiagnosticKind::duplicate, at(name_field.source()),
+                   std::format("duplicate extension '{}' in an overlapping suite view", name), overlap->second);
             return;
         }
         registered.emplace(extension.suite, at(name_field.source()));
@@ -362,7 +361,7 @@ void Loader::read_build(const toml::table& table)
         build.extensions.push_back(std::move(extension));
     });
 
-    if (define(builds_, build_key, std::move(build), key, "build '" + build_key.package + "/" + build_key.id + "'")
+    if (define(builds_, build_key, std::move(build), key, std::format("build '{}/{}'", build_key.package, build_key.id))
         && !extension_locations.empty())
         extension_locations_.emplace(build_key, std::move(extension_locations));
 }
@@ -377,9 +376,9 @@ void Loader::read_track(const toml::table& table)
         key.installation_id = parse_uuid(text(*target, "installation_id", 36), false);
         if (!key.installation_id) invalid(*target, "'installation_id' must be a non-Nil UUIDv4");
     }
-    auto label = key.suite + "/" + key.package + "/" + key.name + "/" + key.platform;
-    if (key.installation_id) label += " (targeted)";
-    define(tracks_, std::move(key), id(required(table, "build"), "build"), name, "track '" + label + "'");
+    auto label = std::format("track '{}/{}/{}/{}{}'", key.suite, key.package, key.name, key.platform,
+                             key.installation_id ? " (targeted)" : "");
+    define(tracks_, std::move(key), id(required(table, "build"), "build"), name, std::move(label));
 }
 
 void Loader::read_fragment(const toml::table& root)
@@ -399,13 +398,16 @@ void Loader::validate_references()
     for (const auto& [id, suite] : suites_)
         for (const auto& package : suite.value.packages)
             if (!packages_.contains(package))
-                report(DiagnosticKind::reference, suite.location, "suite '" + id + "' references unknown package '" + package + "'");
+                report(DiagnosticKind::reference, suite.location,
+                       std::format("suite '{}' references unknown package '{}'", id, package));
 
     for (const auto& [key, build] : builds_) {
         if (!packages_.contains(key.package))
-            report(DiagnosticKind::reference, build.location, "build '" + key.id + "' references unknown package '" + key.package + "'");
+            report(DiagnosticKind::reference, build.location,
+                   std::format("build '{}' references unknown package '{}'", key.id, key.package));
         if (build.value.published_at > header_->value.published_at)
-            report(DiagnosticKind::schema, build.location, "build '" + key.id + "' is newer than the catalog publication time",
+            report(DiagnosticKind::schema, build.location,
+                   std::format("build '{}' is newer than the catalog publication time", key.id),
                    header_->location);
         for (std::size_t i = 0; i < build.value.extensions.size(); ++i) {
             const auto& extension = build.value.extensions[i];
@@ -413,30 +415,31 @@ void Loader::validate_references()
             const auto suite = suites_.find(*extension.suite);
             if (suite == suites_.end() || !std::ranges::binary_search(suite->second.value.packages, key.package))
                 report(DiagnosticKind::reference, extension_locations_.at(key)[i],
-                       "extension suite '" + *extension.suite + "' does not contain package '" + key.package + "'");
+                       std::format("extension suite '{}' does not contain package '{}'", *extension.suite, key.package));
         }
     }
 
     for (const auto& [key, assignment] : tracks_) {
         const auto suite = suites_.find(key.suite);
         if (suite == suites_.end()) {
-            report(DiagnosticKind::reference, assignment.location, "track references unknown suite '" + key.suite + "'");
+            report(DiagnosticKind::reference, assignment.location,
+                   std::format("track references unknown suite '{}'", key.suite));
             continue;
         }
         if (!packages_.contains(key.package) || !std::ranges::binary_search(suite->second.value.packages, key.package)) {
-            report(DiagnosticKind::reference, assignment.location, "track package '" + key.package
-                   + "' is not defined in suite '" + key.suite + "'");
+            report(DiagnosticKind::reference, assignment.location,
+                   std::format("track package '{}' is not defined in suite '{}'", key.package, key.suite));
             continue;
         }
         const auto build = builds_.find({key.package, assignment.value});
         if (build == builds_.end()) {
-            report(DiagnosticKind::reference, assignment.location, "track references unknown build '"
-                   + key.package + "/" + assignment.value + "'");
+            report(DiagnosticKind::reference, assignment.location,
+                   std::format("track references unknown build '{}/{}'", key.package, assignment.value));
             continue;
         }
         if (!build->second.value.artifacts.contains(key.platform))
-            report(DiagnosticKind::reference, assignment.location, "track build has no artifact for platform '"
-                   + key.platform + "'", build->second.location);
+            report(DiagnosticKind::reference, assignment.location,
+                   std::format("track build has no artifact for platform '{}'", key.platform), build->second.location);
         if (!key.installation_id && build->second.value.visibility == Visibility::targeted)
             report(DiagnosticKind::reference, assignment.location, "public track cannot select a targeted-only build",
                    build->second.location);
@@ -551,9 +554,10 @@ CatalogLoad load_catalog_directory(const fs::path& directory, const CatalogUsage
 
 std::string format_diagnostic(const Diagnostic& diagnostic)
 {
-    auto message = location_text(diagnostic.location) + ": " + diagnostic.message;
-    if (diagnostic.related) message += " (related: " + location_text(*diagnostic.related) + ")";
-    return message;
+    const auto location = location_text(diagnostic.location);
+    if (diagnostic.related)
+        return std::format("{}: {} (related: {})", location, diagnostic.message, location_text(*diagnostic.related));
+    return std::format("{}: {}", location, diagnostic.message);
 }
 
 std::string format_success(const Catalog& catalog)
