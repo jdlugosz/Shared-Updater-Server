@@ -30,7 +30,9 @@ The [database design](DATABASE.md) specifies the SQLite schema, transactions, re
 | Admission full, expired queued job, or transient persistence failure | `503` with `Retry-After: 30` as the initial default. No feed is returned. |
 | Loopback `GET /healthz` | `200` when initialized and accepting work, otherwise `503`. Include active catalog revision and a coarse reload result for deployment checks. No census side effects or identifiers. |
 
-Accept hyphenated UUIDv4 text, with hexadecimal case ignored, plus the explicitly allowed Nil UUID. Normalize to 16 bytes and use lowercase text in the contact log. Suite IDs are ASCII tokens of 1–64 characters, beginning with a letter and continuing with letters, digits, underscores, or hyphens. ASCII case is ignored and the canonical catalog ID is lowercase. Thus `/updchk/00000000-0000-0000-0000-000000000000/Launcher` selects `launcher`. Require exactly the two path segments after the prefix.
+Accept UUID text in 8-4-4-4-12 hexadecimal form, with hexadecimal case ignored. Treat the ID as 16 opaque bytes regardless of version or variant, and use lowercase text in the contact log. Reserve the all-zero Nil UUID for anonymous contacts. A UUIDv8 may use its first eight hex digits as a machine tag, such as `00000001`. The census and catalog targeting both use the full UUID.
+
+Suite IDs are ASCII tokens of 1–64 characters, beginning with a letter and continuing with letters, digits, underscores, or hyphens. ASCII case is ignored and the canonical catalog ID is lowercase. Thus `/updchk/00000000-0000-0000-0000-000000000000/Launcher` selects `launcher`. Require exactly the two path segments after the prefix.
 
 The optional query consists of one or more `platform=ID` parameters joined by `&`. IDs use the catalog's canonical lowercase ASCII spelling. They are 1–64 characters, begin with a letter or digit, and can contain letters, digits, underscores, and hyphens. The target limit applies to the path and query together, with a default of 256 bytes.
 

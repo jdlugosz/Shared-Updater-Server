@@ -367,7 +367,7 @@ void Loader::read_track(const toml::table& table)
                  id(name, "name"), id(required(table, "platform"), "platform"), {}};
     if (const auto* target = table.get("installation_id")) {
         key.installation_id = parse_uuid(text(*target, "installation_id", 36), false);
-        if (!key.installation_id) invalid(*target, "'installation_id' must be a non-Nil UUIDv4");
+        if (!key.installation_id) invalid(*target, "'installation_id' must be a non-Nil UUID in 8-4-4-4-12 hexadecimal form");
     }
     auto label = std::format("track '{}/{}/{}/{}{}'", key.suite, key.package, key.name, key.platform,
                              key.installation_id ? " (targeted)" : "");

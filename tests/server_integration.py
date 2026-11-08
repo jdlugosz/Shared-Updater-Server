@@ -27,7 +27,8 @@ from unittest.mock import patch
 
 NIL = "00000000-0000-0000-0000-000000000000"
 ID = "12345678-1234-4234-8234-1234567890ab"
-TARGET = "abcdef01-1234-4234-8234-1234567890ab"
+TAGGED_ID = "00000001-1234-8234-a234-1234567890ab"
+EXTERNAL_ID = "00000002-1234-f234-1234-1234567890ab"
 ATOM = "{http://www.w3.org/2005/Atom}"
 UPD = "{https://dlugosz.enterprises/ns/updater/1}"
 PLATFORMS = ("any", "linux-x64", "windows-x64", "windows-x64-avx2")
@@ -252,12 +253,17 @@ def offline_and_http(root, binary):
         assert request(fixture.port, method="HEAD")[2] == b""
         assert request(fixture.port, body=b"body")[0] == 400
         assert len(fixture.contacts()) == before
-        identities = [str(uuid.uuid4()) for _ in range(16)]
+        identities = [TAGGED_ID.upper(), EXTERNAL_ID.upper(), *(str(uuid.uuid4()) for _ in range(14))]
         with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
             statuses = list(pool.map(lambda identity: request(fixture.port, identity)[0], identities))
         assert statuses == [200] * 16
+        logged_ids = {contact["id"] for contact in fixture.contacts()}
+        assert {TAGGED_ID, EXTERNAL_ID} <= logged_ids
         with fixture.database() as database:
             assert database.execute("SELECT count(*) FROM installation").fetchone()[0] == 18
+            for identity in (TAGGED_ID, EXTERNAL_ID):
+                assert database.execute("SELECT count(*) FROM installation WHERE installation_id=?",
+                                        (uuid.UUID(identity).bytes,)).fetchone()[0] == 1
             assert database.execute("SELECT sum(request_count) FROM anonymous_day").fetchone()[0] == 2
             assert database.execute("PRAGMA quick_check").fetchone()[0] == "ok"
             assert database.execute("PRAGMA foreign_key_check").fetchall() == []

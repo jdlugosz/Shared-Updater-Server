@@ -647,22 +647,21 @@ TEST_CASE("Extension data must be valid XML and must not collide", "[catalog]")
     }
 }
 
-TEST_CASE("Target UUIDs are version 4 and compare by bytes", "[catalog]")
+TEST_CASE("Target UUIDs are non-Nil and compare by bytes", "[catalog]")
 {
     Fixture fixture;
     fixture.valid();
     SECTION("invalid target IDs") {
-        for (const auto* id : {"00000000-0000-0000-0000-000000000000", "12345678-1234-1234-8234-1234567890ab",
-                               "12345678-1234-4234-7234-1234567890ab", "12345678-1234-4234-8234-1234567890a-",
+        for (const auto* id : {"00000000-0000-0000-0000-000000000000", "12345678-1234-4234-8234-1234567890a-",
                                "123456781234423482341234567890ab"}) {
             CAPTURE(id);
             fixture.write("40-track.toml", std::format("{}installation_id = '{}'\n", track, id));
-            require_error(fixture.load(), DiagnosticKind::schema, "non-Nil UUIDv4");
+            require_error(fixture.load(), DiagnosticKind::schema, "non-Nil UUID");
         }
     }
     SECTION("same ID in different hexadecimal case") {
-        fixture.write("41-track.toml", std::format("{}installation_id = '12345678-1234-4234-8234-1234567890ab'\n", track));
-        fixture.write("42-track.toml", std::format("{}installation_id = '{}'\n", track, targeted_id));
+        fixture.write("41-track.toml", std::format("{}installation_id = '00000001-1234-f234-1234-1234567890ab'\n", track));
+        fixture.write("42-track.toml", std::format("{}installation_id = '00000001-1234-F234-1234-1234567890AB'\n", track));
         require_error(fixture.load(), DiagnosticKind::duplicate, "targeted");
     }
 }

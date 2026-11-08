@@ -60,12 +60,17 @@ TEST_CASE("UUIDs and digests use opaque bytes and canonical hexadecimal text", "
     REQUIRE(id);
     REQUIRE((*id)[6] == std::byte{0x42});
     REQUIRE(uuid_string(*id) == "12345678-1234-4234-8234-1234567890ab");
+    const auto tagged = parse_uuid("00000001-1234-8234-A234-1234567890AB", false);
+    REQUIRE(tagged);
+    REQUIRE(uuid_string(*tagged) == "00000001-1234-8234-a234-1234567890ab");
+    const auto external = parse_uuid("00000002-1234-F234-1234-1234567890AB", false);
+    REQUIRE(external);
+    REQUIRE(uuid_string(*external) == "00000002-1234-f234-1234-1234567890ab");
     REQUIRE(parse_uuid("00000000-0000-0000-0000-000000000000") == nil_uuid);
     REQUIRE_FALSE(parse_uuid("00000000-0000-0000-0000-000000000000", false));
-    for (const auto invalid : {"12345678-1234-1234-8234-1234567890ab",
-                              "12345678-1234-4234-1234-1234567890ab",
-                              "12345678-1234-4234-8234-1234567890ag",
-                              "12345678_1234-4234-8234-1234567890ab"})
+    for (const auto invalid : {"12345678-1234-4234-8234-1234567890ag",
+                              "12345678_1234-4234-8234-1234567890ab",
+                              "12345678-1234-4234-8234-1234567890a"})
         REQUIRE_FALSE(parse_uuid(invalid));
     const auto digest = parse_sha256(std::string(64, 'A'));
     REQUIRE(digest);
@@ -162,9 +167,9 @@ TEST_CASE("Targeted tracks replace tags without hiding archived public builds", 
     target.visibility = Visibility::targeted;
     target.version = "special";
     catalog->builds.emplace(BuildKey{"app", "targeted"}, std::move(target));
-    const auto id = *parse_uuid("12345678-1234-4234-8234-1234567890ab");
+    const auto id = *parse_uuid("00000001-1234-f234-1234-1234567890ab");
     catalog->tracks.emplace(TrackKey{"launcher", "app", "current", "windows-x64", id}, "targeted");
-    for (const auto other : {nil_uuid, *parse_uuid("abcdef01-1234-4234-8234-1234567890ab")}) {
+    for (const auto other : {nil_uuid, *parse_uuid("00000001-1234-f234-1234-1234567890ac")}) {
         const auto rendered = render_feed(*catalog, {other, "launcher"});
         REQUIRE(rendered);
         Document doc(*rendered);

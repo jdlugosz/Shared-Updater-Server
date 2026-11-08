@@ -59,10 +59,7 @@ std::optional<Uuid> parse_uuid(std::string_view text, bool allow_nil)
     }
     if (next != hex.end()) return {};
     const auto id = parse_hex<16>({hex.data(), hex.size()});
-    if (!id) return {};
-    if (allow_nil && *id == nil_uuid) return id;
-    if (((*id)[6] & std::byte{0xf0}) != std::byte{0x40}
-        || ((*id)[8] & std::byte{0xc0}) != std::byte{0x80}) return {};
+    if (!id || (!allow_nil && *id == nil_uuid)) return {};
     return id;
 }
 
