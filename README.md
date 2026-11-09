@@ -201,6 +201,23 @@ to existing active build versions, publication times, and artifact bindings,
 and rejects reuse of its active revision for different catalog content.
 Tracks and suite metadata can change with a new revision.
 
+## View the live catalog
+
+From the Windows development checkout, use PowerShell 7 and the existing
+operator SSH login. The command captures the selected catalog slot, verifies
+its revision against the running service, and opens a local HTML report.
+
+```powershell
+.\tools\show-catalog.ps1
+```
+
+The report shows the revision, publication and capture dates, source commit,
+suites, packages, all build artifacts, and public and targeted track assignments.
+Targeted installation IDs are hidden unless you pass `-IncludeTargetIds`.
+Use `-NoOpen` to save the report without opening a browser. Rerun the command
+to refresh the snapshot. The report goes to `out/catalog-report/live.html`.
+The `-SshTarget` option selects another host with the same publication layout.
+
 ## Backups and census reports
 
 [Census tools](tools/census.py) use SQLite's backup API and verify integrity and

@@ -135,6 +135,9 @@ if(BUILD_TESTING)
             --mode ${operation})
         set_tests_properties(updater.${operation} PROPERTIES TIMEOUT 45 LABELS "integration;operators")
     endforeach()
+    add_test(NAME updater.catalog-report COMMAND ${Python3_EXECUTABLE} -B
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/catalog_report_integration.py)
+    set_tests_properties(updater.catalog-report PROPERTIES TIMEOUT 15 LABELS "integration;operators")
     find_program(CADDY_EXECUTABLE caddy)
     if(CADDY_EXECUTABLE)
         add_test(NAME updater.caddy COMMAND ${Python3_EXECUTABLE}
