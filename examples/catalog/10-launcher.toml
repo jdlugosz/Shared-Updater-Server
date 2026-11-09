@@ -29,6 +29,6 @@ sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
 [[track]]
 suite = "launcher"
 package = "launcher"
-name = "current"
+name = "development"
 platform = "windows-x64"
 build = "example-build-001"

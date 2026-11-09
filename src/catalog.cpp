@@ -35,7 +35,7 @@ constexpr auto atom_namespace = "http://www.w3.org/2005/Atom"sv;
 constexpr auto xml_namespace = "http://www.w3.org/XML/1998/namespace"sv;
 constexpr auto xmlns_namespace = "http://www.w3.org/2000/xmlns/"sv;
 
-// helpers for media_type
+// ASCII character classes for catalog tokens.
 bool digit(char c) { return c >= '0' && c <= '9'; }
 bool lower(char c) { return c >= 'a' && c <= 'z'; }
 bool alpha(char c) { return lower(c) || (c >= 'A' && c <= 'Z'); }
@@ -363,8 +363,14 @@ void Loader::read_track(const toml::table& table)
 {
     keys(table, {"suite", "package", "name", "platform", "build", "installation_id"});
     const auto& name = required(table, "name");
+    auto track = text(name, "name", 64);
+    auto base = std::string_view{track};
+    if (base.ends_with('*')) base.remove_suffix(1);
+    if (base.empty() || !alnum(base.front()) ||
+        !std::ranges::all_of(base, [](char c) { return alnum(c) || c == '_' || c == '-'; }))
+        invalid(name, "'name' must be an ASCII track label beginning with a letter or digit");
     TrackKey key{id(required(table, "suite"), "suite", true), id(required(table, "package"), "package"),
-                 id(name, "name"), id(required(table, "platform"), "platform"), {}};
+                 std::move(track), id(required(table, "platform"), "platform"), {}};
     if (const auto* target = table.get("installation_id")) {
         key.installation_id = parse_uuid(text(*target, "installation_id", 36), false);
         if (!key.installation_id) invalid(*target, "'installation_id' must be a non-Nil UUID in 8-4-4-4-12 hexadecimal form");

@@ -130,12 +130,14 @@ sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
 [[track]]
 suite = "launcher"
 package = "launcher-app"
-name = "current"
+name = "development"
 platform = "windows-x64"
 build = "sample-build-001"
 ```
 
 The example uses fixture URLs and digest. Check unique suite, package, build, artifact, and track keys. Validate sizes, HTTPS links, timestamps, SHA-256 format, XML-representable text, suite membership, and every reference. A track must point to an existing artifact for its platform. A default track cannot expose a targeted-only build. The same revision must always refer to the same published content. Publisher tooling verifies immutable artifact URLs, sizes, and hashes before publication. The daemon validates the metadata locally without reaching out to the artifact host on reload.
+
+Track names are case-sensitive labels of up to 64 ASCII characters. Start with a letter or digit, then use letters, digits, underscores, or hyphens. A single optional final `*` marks a temporary track, as in `FredWIP*`. The server matches the complete label and sends it verbatim in the feed.
 
 Include the suite's public artifacts, including retained older builds, in its feed. Add targeted artifacts only when their track assignment matches the caller. For a matching UUID, a targeted assignment replaces the track tag for that suite, package, and platform. The public artifact may still appear without that tag. Resolve an exact platform before considering a platform-independent assignment on the client. Track changes never rewrite a build ID or remove its archived artifact by themselves. Targeting with a UUID is intended for non-confidential builds. Restricted downloads require a separate authorization design.
 

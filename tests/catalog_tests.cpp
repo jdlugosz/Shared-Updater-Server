@@ -1,6 +1,7 @@
 // Shared Updater Server - tests/catalog_tests.cpp
 // <Oort.dlugosz.enterprises/john/Shared-Updater-Server> - see LICENCE.
 
+#include "updater/atom.hpp"
 #include "updater/catalog.hpp"
 #include "updater/uri.hpp"
 
@@ -510,6 +511,52 @@ TEST_CASE("Schema rejects unsupported headers and wrong TOML types", "[catalog]"
     SECTION("canonical lowercase suite") {
         fixture.write("10-suite.toml", replaced(suite, "\"launcher\"", "\"Launcher\""));
         require_error(fixture.load(), DiagnosticKind::schema, "canonical lowercase identifier");
+    }
+}
+
+TEST_CASE("Track labels preserve ASCII case and a literal final star", "[catalog][feed]")
+{
+    Fixture fixture;
+    fixture.valid();
+    const auto labels = {"alpha", "FredWIP*", "fredwip*", "7-With_underscores"};
+    int index = 0;
+    for (const auto label : labels) {
+        fixture.write(std::format("track-{}.toml", index++),
+                      replaced(track, "\"current\"", std::format("\"{}\"", label)));
+    }
+    const auto loaded = fixture.load();
+    REQUIRE(loaded);
+    const auto& catalog = **loaded;
+    const auto atom = render_feed(catalog, {nil_uuid, "launcher"});
+    REQUIRE(atom);
+    for (const auto label : labels) {
+        CAPTURE(label);
+        REQUIRE(catalog.tracks.at({"launcher", "launcher-app", label, "windows-x64", {}}) == "build-001");
+        REQUIRE(atom->contains(std::format("<upd:track>{}</upd:track>", label)));
+    }
+}
+
+TEST_CASE("Invalid track labels are rejected without changing identifier rules", "[catalog]")
+{
+    Fixture fixture;
+    fixture.valid();
+    SECTION("invalid characters or position") {
+        for (const auto label : {"*", "*Fred", "Fred*WIP", "Fred**", "-Fred", "_Fred",
+                                 "Fred WIP", "Fred.WIP", "Fréd"}) {
+            CAPTURE(label);
+            fixture.write("40-track.toml", replaced(track, "\"current\"", std::format("\"{}\"", label)));
+            require_error(fixture.load(), DiagnosticKind::schema, "must be an ASCII track label");
+        }
+    }
+    SECTION("length includes the star") {
+        fixture.write("40-track.toml", replaced(track, "\"current\"", std::format("\"{}*\"", std::string(63, 'F'))));
+        REQUIRE(fixture.load());
+        fixture.write("40-track.toml", replaced(track, "\"current\"", std::format("\"{}*\"", std::string(64, 'F'))));
+        require_error(fixture.load(), DiagnosticKind::schema, "'name' exceeds 64 bytes");
+    }
+    SECTION("platform identifiers remain canonical lowercase") {
+        fixture.write("40-track.toml", replaced(track, "\"windows-x64\"", "\"Windows-x64*\""));
+        require_error(fixture.load(), DiagnosticKind::schema, "'platform' must be a canonical lowercase identifier");
     }
 }
 
