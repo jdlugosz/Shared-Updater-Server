@@ -1,5 +1,20 @@
 Shared Updater Server
 Copyright (c) 2026 John Długosz. All rights reserved.
 
-This project is private. Its source code, binaries, and modified versions are
-for private use only and may not be distributed.
+Source inspection and companion use
+
+You may read the source code that the copyright holder makes public and
+download a copy for inspection. This permission is limited to inspection.
+
+You may copy and distribute an unmodified binary release provided by the
+copyright holder as a bundled component of another application, solely to
+provide updates for that application. You may install, configure, run, and
+update that binary for the same purpose. Keep the applicable copyright and
+license notices with any copy you distribute.
+
+Running a general-purpose update service or operating a separate self-hosted
+LAN update service requires a separate written agreement with the copyright
+holder. All other rights are reserved.
+
+Separately licensed third-party material remains subject to its own terms.
+These terms leave intact any rights you have under applicable law.

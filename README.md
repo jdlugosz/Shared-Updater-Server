@@ -1,5 +1,7 @@
 # Shared Updater Server
 
+See the [license](LICENCE) for source inspection and companion use.
+
 A working C++ daemon for Ubuntu behind Caddy. It assembles TOML catalog fragments,
 returns Atom package feeds, records installation activity in SQLite, and maintains
 a bounded contact log. One asynchronous I/O thread handles overlapping HTTP
