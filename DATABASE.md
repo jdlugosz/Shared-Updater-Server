@@ -1,8 +1,15 @@
 # Census database design
 
-This is the implemented SQLite schema for the [server design](DESIGN.md). The unit of observation is an installation UUID within an Application Suite. Package, track, platform, IP address, and installed version are absent from the initial census.
+This is the implemented SQLite schema for the [server design](DESIGN.md).
+With a nonzero installation UUID, the census stores the UUID and suite, first
+and last contact times, and one activity row per observed UTC day. A UUID can
+link repeat observations. A Nil check increments an anonymous request count
+by suite and UTC day, with no installation row.
 
-The database stores three different facts. An installation row gives first and last contact. An activity row records that the pair was observed on a UTC day. An anonymous counter counts Nil requests by suite and day. The rolling contact log has its own retention and includes repeat attempts. Reports use the committed database.
+Neither the database nor the contact log includes the IP address, package,
+track, platform, or installed version. The rolling contact log uses its own
+size-based retention and includes repeat attempts. Reports use the committed
+database. See [daemon settings and recorded data](docs/settings.md).
 
 ## Schema version 1
 
@@ -141,7 +148,7 @@ ORDER BY suite_id;
 
 ## Retention, maintenance, and recovery
 
-Proposed defaults for review are 400 UTC day buckets including today, and removal of pairs with no contact for 730 days. Expiring a pair also removes any remaining activity through the foreign key. A later contact becomes newly observed again. Report retention bounds with the results, and use backups or separately planned aggregate reports for comparisons outside the retained window. Anonymized request counts and identified activity use the same day-bucket window. The bounded raw log rotates by size independently.
+The defaults keep 400 UTC day buckets including today and remove pairs whose last contact is older than 730 days. Pruning removes any remaining activity for an inactive pair in bounded batches before deleting the pair. A later contact becomes newly observed again. Report retention bounds with the results, and use backups or separately planned aggregate reports for comparisons outside the retained window. Anonymous request counts and activity associated with an installation UUID use the same day-bucket window. The bounded raw log rotates by size independently.
 
 Run pruning in small worker-owned transactions between check-ins, once daily and after startup if needed. Use a UTC day cutoff supplied by the clock policy. Resume unfinished batches later. A maintenance error is visible in the service journal and leaves normal check-in work able to proceed if its own persistence succeeds. Never interpret an older observed clock value as an instruction to move timestamps backwards.
 
@@ -184,4 +191,7 @@ WHERE (suite_id, installation_id) IN (
 );
 ```
 
-Use SQLite's backup API or equivalent SQLite tooling to produce a consistent backup on local disk. Keep an off-host copy, use a bounded retention policy for backups containing IDs, and check restoration on staging before promotion. Run `quick_check` and `foreign_key_check` on the restored file. Restore with the daemon stopped and preserve the original database for inspection if recovery is needed. The rotating log is too short to reconstruct the historical census. [SQLite backup API](https://sqlite.org/backup.html) · [SQLite STRICT tables](https://sqlite.org/stricttables.html)
+The census tool can create a consistent backup with SQLite's backup API and
+check its integrity and foreign keys. Backups preserve the census data and
+are independent of the daemon's pruning. The rolling contact log holds only
+recent contacts and cannot reconstruct the full census. [SQLite backup API](https://sqlite.org/backup.html)

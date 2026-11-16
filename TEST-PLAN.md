@@ -1,79 +1,12 @@
 # Shared Updater Server test plan
 
-The target is a repeatable pass from C++ unit tests through a real Ubuntu service and Caddy. See the [daemon requirements](DESIGN.md), [request pipeline and test interfaces](REQUEST-PIPELINE.md), and [SQLite design](DATABASE.md). Use synthetic UUIDs, suites, artifacts, and dedicated state directories in automated tests.
+This reference covers unit, component, and integration checks. The tests use
+synthetic identifiers, suites, and artifacts with dedicated state directories.
+See the [daemon design](DESIGN.md), [request pipeline](REQUEST-PIPELINE.md), and
+[SQLite schema](DATABASE.md).
 
-## GCC 16.2 verification on November 6
-
-All 63 CTest cases passed on VPS Local with the GCC 16.2 release in each of
-the normal, AddressSanitizer/UndefinedBehaviorSanitizer, and ThreadSanitizer
-presets. A separate tagged checkout verified that `--version` reflects tag
-and checkout changes on rebuild and that identical metadata does not relink.
-The temporary installation used the matching C++ runtime and passed
-the isolated systemd acceptance test. The normal binary is
-`/opt/shared-updater-server/build/gcc-16.2.0/linux-gcc/shared-updater-server`.
-
-## Implemented server verification on November 5
-
-| Check | Result |
-| --- | --- |
-| Normal GCC 16/C++26 preset | All 62 CTest cases passed: 58 C++ cases and four integration groups |
-| AddressSanitizer and UndefinedBehaviorSanitizer preset | The same 62 cases passed with leak detection and halt on undefined behavior |
-| Separate ThreadSanitizer preset | The same 62 cases passed with halt on the first race report |
-| Real loopback HTTP | Concurrent checks, request validation, Nil, FIFO saturation, queue expiry, connection reset during persistence, restart, private health, and valid/invalid reloads passed |
-| Real HTTPS Caddy and static download | Parsed the feed, fetched its enclosure, checked size/SHA-256, verified concurrent forwarding, and checked UUID absence in operational logs including an upstream 502 |
-| Git publisher | Exported selected committed fragments; validated and activated a second slot; rejected symlinked or invalid fragments; restored both disk selection and running revision after an immutable-artifact rewrite was rejected |
-| Census operator tools | Verified new private backups, refusal to overwrite an existing backup, active/new/anonymous/monthly/cohort reports, snapshot checks, and restart after an offline restore |
-| Isolated systemd unit using the packaged hardening | Readiness, idle survival across watchdog periods, successful and rejected reload acknowledgement, actual watchdog termination/restart during a blocked writer, graceful stop, and backup restoration passed |
-| Temporary CMake installation | Executable, tools, unit permissions, and examples installed correctly; the installed executable validated its installed example catalog |
-
-That run used
-`/opt/shared-updater-server/build/linux-gcc/shared-updater-server`.
-The acceptance test creates a uniquely named unit on VPS Local and removes its
-unit, state, and logs. It leaves the existing Caddy service unchanged.
-
-Expanded testing caught the systemd DynamicUser directory aliases and a
-ThreadSanitizer report when consuming a loader result before joining its exited
-thread. The implementation now resolves and validates the service-owned
-directories and joins the completed loader before reading its result. The final
-normal and sanitizer suites and systemd acceptance test passed after these fixes.
-
-The complete CTest suite is available through `linux-gcc`, `linux-asan`,
-and `linux-tsan` configure/build/test presets. The sanitizer builds are separate
-and use one compilation job. GCC emits its existing unsupported-fence
-instrumentation warning from Boost.Asio headers in the ThreadSanitizer build;
-the tests run without race suppressions.
-
-## VPS Local baseline and design probes
-
-On November 4, 2026, VPS Local (`vps-stage`) reported Ubuntu 26.04.1 LTS, two CPUs, GCC 16.0.1 from the pinned Ubuntu snapshot, CMake 4.2.3, systemd 259, Caddy 2.11.7, SQLite 3.46.1, toml++ 3.4.0, and Catch2 3.7.1.
-
-| Probe | Observed result |
-| --- | --- |
-| Existing built Catch2 smoke test | Passed from the guest's ext4 build directory |
-| Temporary Caddy instance and HTTP backend | Forwarded two simultaneous requests with unchanged paths. A rendezvous at the backend required both requests to arrive concurrently. |
-| Temporary Caddy upstream failure | Access-log skipping alone left the UUID in the 502 error. The scoped runtime filter removed the request object while retaining the status and error diagnostic. |
-| SQL copied from the design into a scratch SQLite database | Passed migration, constraints, repeated same-day contacts, timestamp extrema, transaction rollback, active and cohort reports, Nil counting, backup, bounded pruning, and cascading deletion |
-| Temporary GCC 16 build using `-std=c++26` | Compiled and ran a probe using `std::jthread`, stop tokens, `std::expected`, and `std::println` |
-| Illustrative configuration | The example catalog parsed and its track referenced the sample artifact. Caddy validated the proposed proxy route in a temporary site. |
-
-VMware listed the source export, but Ubuntu had no HGFS mount at `/mnt/hgfs` during inspection. Restore the mount or stage a reviewed source snapshot before rebuilding. Boost, libxml2, and libsystemd development packages were available in APT and require a build/link check during implementation. Production toolchain compatibility needs its own preflight.
-
-The catalog implementation was built after the source share was mounted again.
-All 21 discovered CTest cases passed on VPS Local with GCC 16 in C++26 mode,
-including 20 catalog cases and the existing dependency smoke test. The same
-suite passed in a separate AddressSanitizer and UndefinedBehaviorSanitizer
-build. Catalog tests exercise the public file and directory loaders.
-
-The success-report addition brings the normal suite to 25 passing cases. It
-covers actual fragment and byte counts, the requested 53-fragment example,
-custom limits, partial-kiByte rounding, and maximum-size arithmetic.
-
-The November 5 `catalog.hpp` review changes bring the suite to 27 passing cases
-in both the normal GCC 16/C++26 build and a separate AddressSanitizer and
-UndefinedBehaviorSanitizer build. The tests check key/value associations across
-all snapshot maps after gathering unordered records, signed usage reporting,
-negative limits, zero ceilings, and the maximum signed byte count. Snapshots
-now use `std::flat_map`, and usage and limits share the same signed count type.
+A November 14 staging run passed all 69 CTest cases, including HTTP and Caddy
+integration, Git publication, catalog reporting, census tools, and build metadata.
 
 ## Automated unit and component tests
 
@@ -111,41 +44,3 @@ Use a Python standard-library harness under CTest on Linux. Create an isolated c
 7. Inspect the isolated Caddy logs and daemon diagnostics for exposure of raw UUIDs or client IPs on the check route, including an upstream error. The controlled contact log should contain the expected UUID and suite.
 
 Use fixture clocks or UTC-safe fixture windows so tests remain deterministic across midnight. Exercise termination after log append and before commit, then after commit and before the HTTP response. Validate the expected attempted contact or committed observation on restart. Use bounded waits and preserve logs on failure.
-
-## VPS Local final acceptance
-
-After implementation, verify the source mount and run the build and test commands:
-
-```sh
-findmnt /mnt/hgfs
-cd /mnt/hgfs/Shared-Updater-Server
-cmake --preset linux-gcc
-cmake --build --preset linux-gcc
-ctest --preset linux-gcc
-```
-
-Use a separate staging systemd unit with its own state and a test catalog. Validate the unit and Caddy configuration. The proposed isolated test ports below are 18080 for the daemon and 18081 for Caddy.
-
-```sh
-curl -fsS http://127.0.0.1:18080/healthz
-curl -fsS \
-  http://127.0.0.1:18081/updchk/12345678-1234-4234-8234-1234567890ab/Launcher \
-  -o /tmp/updater-stage.atom
-python3 -c 'import xml.etree.ElementTree as E; print(E.parse("/tmp/updater-stage.atom").getroot().tag)'
-```
-
-Expect `{http://www.w3.org/2005/Atom}feed` and verify the revision and links against the fixture. Run the automated proxy matrix. Then verify the service lifecycle on the actual systemd manager:
-
-- Readiness follows database, catalog, and listener initialization. Invalid startup configuration fails with bounded restart attempts.
-- Valid and invalid reloads through `systemctl reload` produce the expected active revision and reload result. Inspect both rather than relying solely on the command exit status.
-- A deliberately stalled test worker triggers watchdog termination and restart in an isolated unit. A healthy idle worker survives longer than the watchdog. Verify a successful new check and database integrity after restart.
-- Stop and restart under a small workload. Verify the shutdown budget, completed transactions, and retry of interrupted responses.
-- Restore a staging backup into isolated state. Verify integrity, foreign keys, and representative reports.
-
-Record OS, compiler, package and service versions, catalog revision, automated results, and the expected synthetic database and log observations.
-
-## Production promotion after review
-
-Build the reviewed source for the production OS. Verify runtime dependencies, offline catalog validation, and a restorable database backup. Retain the prior binary and catalog. Install through systemd, verify the active revision on loopback, and activate the validated Caddy route. Check the public HTTPS endpoint with a designated synthetic contact. Parse the response, fetch a known installer URL, and confirm the database observation and log bounds. Keep load, watchdog, and deliberate failure tests on staging.
-
-For a failed promotion, restore the prior route, binary, and catalog as applicable. A schema change requires a compatible older binary or restoring the pre-deployment database backup.
