@@ -1,0 +1,364 @@
+{
+  "index.html": {
+    "heading": "Długosz software downloads",
+    "description": "Download Launcher and Shared Updater Client for Windows x64.",
+    "body": [
+      "<p>Downloads for Windows x64. <a href=\"/downloads/previous-versions/\">Browse all files and previous versions</a>.</p>",
+      "<h2>Launcher</h2>",
+      "<p>Open apps and files from tabs along the edge of your screen.</p>",
+      "<p><a class=\"download\" href=\"/downloads/launcher/\">Launcher downloads</a></p>",
+      "<h2>Shared Updater Client</h2>",
+      "<p>Check for updates and install new versions of Launcher and other Długosz apps.</p>",
+      "<p><a class=\"download\" href=\"/downloads/shared-updater/\">Shared Updater Client downloads</a></p>"
+    ]
+  },
+  "launcher/1.1.0.20/index.html": {
+    "heading": "Launcher 1.1.0.20 Beta",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p><a href=\"Launcher-R1.1.0.20-windows-x64.zip\">Download the Launcher beta ZIP</a></p>",
+      "<p>Extract the ZIP and run <code>Install.cmd</code>.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.21/index.html": {
+    "heading": "Launcher 1.1.0.21 Beta",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p><a href=\"Launcher-R1.1.0.21-windows-x64.zip\">Download the Launcher beta ZIP</a></p>",
+      "<p>Extract the ZIP and run <code>Install.cmd</code>.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.23/index.html": {
+    "heading": "Launcher 1.1.0.23 Beta",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p><a href=\"Launcher-R1.1.0.23-windows-x64.zip\">Download the Launcher beta ZIP</a></p>",
+      "<p>Extract the ZIP and run <code>Install.cmd</code>.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.24/index.html": {
+    "heading": "Launcher 1.1.0.24 Beta",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p>Clicking Launcher while its About dialog is open brings the dialog forward.</p>",
+      "<p><a href=\"Launcher-R1.1.0.24-windows-x64.zip\">Download the Launcher beta ZIP</a></p>",
+      "<p>Extract the ZIP and run <code>Install.cmd</code>, or choose <strong>Install…</strong> in Shared Updater Client.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.26/index.html": {
+    "heading": "Launcher 1.1.0.26 Development",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p>This build uses the shared Windows C++ modules for file lookup, About, and the Updater handoff. About shows whether Launcher is portable, installed for all users, or installed for your Windows account.</p>",
+      "<p>In Launcher, choose <strong>About → Check now</strong>, follow the <strong>development</strong> track, and choose <strong>Install…</strong> for this version.</p>",
+      "<p><a href=\"Launcher-R1.1.0.26-windows-x64.zip\">Download the Launcher development ZIP</a>. To install from the download, extract it and run <code>Install.cmd</code>.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.27/index.html": {
+    "heading": "Launcher 1.1.0.27 Development",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p>Setup records the committed update so <a href=\"/downloads/shared-updater/1.0.16-prerelease/\">Updater Client 1.0.16</a> can verify and open the post-update review. Registered Release Setup retains a verified prior executable when available.</p>",
+      "<p>In Launcher, open <strong>About → Check now</strong>, follow <strong>development</strong>, and choose <strong>Install…</strong> for this build.</p>",
+      "<p><a href=\"Launcher-R1.1.0.27-windows-x64.zip\">Download the Launcher development ZIP</a>. To install manually, extract the complete archive and run <code>Install.cmd</code>.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.33/index.html": {
+    "heading": "Launcher 1.1.0.33 Development",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p>Setup adds <strong>Launcher Update History and Recovery</strong> to the Start menu for the selected installation scope. <a href=\"/downloads/shared-updater/1.0.17-prerelease/\">Updater Client 1.0.17</a> can verify the committed update and open a review after Setup.</p>",
+      "<p>In Launcher, open <strong>About → Check now</strong>, follow <strong>development</strong>, and choose <strong>Install…</strong> for this build.</p>",
+      "<p><a href=\"Launcher-R1.1.0.33-windows-x64.zip\">Download the Launcher development ZIP</a>. To install manually, extract the complete archive and run <code>Install.cmd</code>.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.34/index.html": {
+    "heading": "Launcher 1.1.0.34 Development",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p>Setup’s Finish page shows where to find <strong>Launcher Update History and Recovery</strong> when its Start shortcut is available.</p>",
+      "<!-- monitored-update -->",
+      "<p><a href=\"Launcher-R1.1.0.34-windows-x64.zip\">Download the Launcher development ZIP</a>. To install manually, extract the complete archive and run <code>Install.cmd</code>.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.35/index.html": {
+    "heading": "Launcher 1.1.0.35 Development",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p>Setup has a more compact Finish page, its own Windows taskbar identity, and a Launcher icon. The page shows where to find <strong>Launcher Update History and Recovery</strong> when its Start shortcut is available.</p>",
+      "<p>Launcher passes the TOML parser’s line and column to Updater when invalid settings prevent startup.</p>",
+      "<!-- monitored-update -->",
+      "<p><a href=\"Launcher-R1.1.0.35-windows-x64.zip\">Download the Launcher development ZIP</a>. To install manually, extract the complete archive and run <code>Install.cmd</code>.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.37/index.html": {
+    "heading": "Launcher 1.1.0.37 Development",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p>Setup records the signed archive identity for a later Revert. This package establishes the baseline for reverting from a subsequent signed build.</p>",
+      "<p>Launching with no arguments reveals the existing default drawer, including after <strong>Hide</strong>. Launching with an explicit configuration opens a separate drawer.</p>",
+      "<!-- monitored-update -->",
+      "<p><a href=\"Launcher-R1.1.0.37-windows-x64.zip\">Download the Launcher development ZIP</a>. To install manually, extract the complete archive and run <code>Install.cmd</code>.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.39/index.html": {
+    "heading": "Launcher 1.1.0.39 Development",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p>Reinstalling the same Launcher build now preserves its verified archive history when the installed program and managed files still match. This keeps the previous signed package available for Revert.</p>",
+      "<p>The bundled Launcher SVG Extractor now has its own version. Its product version is 1.1 and its file version is 1.1.0.38. Future Launcher builds can keep the same Extractor when its code and resources are unchanged.</p>",
+      "<p>With <a href=\"/downloads/shared-updater/1.0.23-prerelease/\">Updater Client 1.0.23</a> and <a href=\"/downloads/launcher/1.1.0.37/\">Launcher 1.1.0.37</a> installed through the catalog, update to this build to try restoring the exact previous signed package.</p>",
+      "<p><a href=\"Launcher-R1.1.0.39-windows-x64.zip\">Download the Launcher development ZIP</a>. To install manually, extract the complete archive and run <code>Install.cmd</code>.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.40/index.html": {
+    "heading": "Launcher 1.1.0.40 Development",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p>Launcher Setup has its own signed executable for the install and upgrade elevation prompt. Windows Installed apps also opens Launcher Setup to uninstall.</p>",
+      "",
+      "<!-- monitored-update -->",
+      "<p><a href=\"Launcher-R1.1.0.40-windows-x64.zip\">Download the Launcher development ZIP</a>. To install manually, extract the complete archive and run <code>Launcher Setup.exe</code> in the versioned folder.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/1.1.0.41/index.html": {
+    "heading": "Launcher 1.1.0.41 Development",
+    "body": [
+      "<p>Windows x64 prerelease for evaluation.</p>",
+      "<p>Launcher Setup has its own signed executable for the install and upgrade elevation prompt. Windows Installed apps also opens Launcher Setup to uninstall.</p>",
+      "",
+      "<!-- monitored-update -->",
+      "<p><a href=\"Launcher-R1.1.0.41-windows-x64.zip\">Download the Launcher development ZIP</a>. To install manually, extract the complete archive and run <code>Launcher Setup.exe</code> in the versioned folder.</p>",
+      "<p><a href=\"LICENSE.txt\">Prerelease evaluation terms</a></p>"
+    ]
+  },
+  "launcher/examples-1.1.0.23/index.html": {
+    "heading": "Launcher Example Panels",
+    "body": [
+      "<p>Editable panel configurations for Launcher 1.1.0.23.</p>",
+      "<p><a href=\"Launcher-Example-Panels-1.1.0.23.zip\">Download the example panels ZIP</a></p>",
+      "<ul>",
+      "<li><strong>Everyday</strong> pairs Windows shortcuts with a Projects panel you can customize.</li>",
+      "<li><strong>Many Colors</strong> previews the bundled light colors across 21 tabs.</li>",
+      "<li><strong>Adobe Creative Cloud</strong> illustrates discovery of installed Adobe applications.</li>",
+      "</ul>",
+      "<p>Extract the ZIP to a folder you can edit and follow <code>README.txt</code> to open a sample in Launcher. Prerelease evaluation terms are included.</p>"
+    ]
+  },
+  "launcher/index.html": {
+    "heading": "Launcher portable downloads",
+    "body": [
+      "<p>Download Launcher for Windows x64.</p>",
+      "<p><a href=\"/downloads/previous-versions/launcher/\">Previous versions and all Launcher files</a></p>",
+      "",
+      "<!-- launcher-tracks -->",
+      "",
+      "<h2>Run Launcher portably</h2>",
+      "<ol>",
+      "  <li>Extract the complete ZIP to a folder you can write to.</li>",
+      "  <li>Read <code>Portable.txt</code> and open the versioned folder beside it.</li>",
+      "  <li>Run the versioned <code>Launcher-R&lt;version&gt;.exe</code> directly. The outer <code>Install.cmd</code> is for installing Launcher.</li>",
+      "</ol>",
+      "<p>To give this copy its own settings, copy <code>Launcher.default.toml</code> to",
+      "  <code>Launcher.toml</code> beside the executable before first run.</p>"
+    ]
+  },
+  "previous-versions/index.html": {
+    "heading": "Previous versions",
+    "description": "Browse the public Launcher and Shared Updater Client download folders.",
+    "body": [
+      "<ul>",
+      "  <li><a href=\"/downloads/previous-versions/launcher/\">Launcher files</a></li>",
+      "  <li><a href=\"/downloads/previous-versions/shared-updater/\">Shared Updater Client files</a></li>",
+      "</ul>",
+      "<p>Open a version folder to download its files. Select <code>index.html</code> for release notes where available.</p>"
+    ]
+  },
+  "shared-updater/1.0.12-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.12",
+    "title": "Shared Updater Client 1.0.12 | Długosz",
+    "body": [
+      "<p>Długosz software · Development</p>",
+      "<p>The Updater now discovers publisher-defined tracks, remembers durable tracks, and shows tracks ending in <code>*</code> only while they are offered.</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.12-win-x64.exe\">Download Setup for Windows x64</a></p>",
+      "<p>Close the Updater window before running Setup. An upgrade keeps your existing installation scope. Windows may ask for administrator approval.</p>",
+      "<p>This development build is signed with the Długosz prerelease certificate. Use it on a test PC configured to trust that certificate.</p>",
+      "<p>Setup SHA-256 <code>4e1cd8f8f495d799fb6fdc7e863e37b5cd8b4c88ed81a0311f74a0ef0c6e90ad</code></p>"
+    ]
+  },
+  "shared-updater/1.0.13-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.13",
+    "title": "Shared Updater Client 1.0.13 | Długosz",
+    "body": [
+      "<p>Długosz software · Development</p>",
+      "<ul>",
+      "  <li>The catalog groups Launcher, Updater Client, and related downloads in separate sections.</li>",
+      "  <li>The list marks installed and older versions and remembers related files you downloaded through the Updater.</li>",
+      "  <li>Eligible newer Updater packages offer <strong>Install…</strong> and keep your existing installation scope.</li>",
+      "</ul>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.13-win-x64.exe\">Download Setup for Windows x64</a></p>",
+      "<p>If you are upgrading from 1.0.12, choose <strong>Download…</strong> in the Updater, then close that window and run the saved Setup.</p>",
+      "<p>This development build is signed with the Długosz prerelease certificate. Use it on a test PC configured to trust that certificate.</p>",
+      "<p>Setup SHA-256 <code>e99c1885db6ef19b4c92ecfb9bab9c996ed8f7833ee940d87fd8f5f7c214cb44</code></p>"
+    ]
+  },
+  "shared-updater/1.0.14-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.14",
+    "title": "Shared Updater Client 1.0.14 | Długosz",
+    "body": [
+      "<p>Długosz software · Development</p>",
+      "<ul>",
+      "  <li>Set how often the app checks for updates next to <strong>Follow track</strong>. The defaults are 30 days for release, 7 for beta, and 1 for development or a special track.</li>",
+      "  <li>The wider Track and Status columns make labels such as <strong>Downloaded before</strong> easier to read.</li>",
+      "  <li>Hover over any column in a package row to see its details. The tooltip stays visible longer.</li>",
+      "</ul>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.14-win-x64.exe\">Download Setup for Windows x64</a></p>",
+      "<p>In Updater 1.0.13, select 1.0.14 and choose <strong>Install…</strong>. Windows needs to trust the prerelease signer for this handoff. You can also choose <strong>Download…</strong>, close the Updater, and run the saved Setup.</p>",
+      "<p>This development build is signed with the Długosz prerelease certificate. Use it on a test PC configured to trust that certificate.</p>",
+      "<p>Setup SHA-256 <code>51ece2e41d833e26595cf1dbdce02988ae9e5a27a6b385c17d8a496c96dd5ebe</code></p>"
+    ]
+  },
+  "shared-updater/1.0.15-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.15",
+    "title": "Shared Updater Client 1.0.15 | Długosz",
+    "body": [
+      "<p>Długosz software · Development</p>",
+      "<ul>",
+      "  <li>Updater Setup asks Windows to bring it forward during a manual upgrade and flashes its taskbar button if Windows declines. The new Updater also hands foreground permission to Setup and lets the open Launcher About window yield where needed.</li>",
+      "  <li>Hover over the information icon to see that it shows the Updater Client version and packages.</li>",
+      "</ul>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.15-win-x64.exe\">Download Setup for Windows x64</a></p>",
+      "<p>In Updater 1.0.14, select 1.0.15 and choose <strong>Install…</strong>. Windows needs to trust the prerelease signer for this handoff. You can also choose <strong>Download…</strong>, close the Updater, and run the saved Setup.</p>",
+      "<p>This development build is signed with the Długosz prerelease certificate. Use it on a test PC configured to trust that certificate.</p>",
+      "<p>Setup SHA-256 <code>8d2bb90b7785b10589b9e5b3ff07973c144e8701a2fe50cc0a0d6858407661a6</code></p>"
+    ]
+  },
+  "shared-updater/1.0.16-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.16",
+    "body": [
+      "<p>Signed Windows x64 development build.</p>",
+      "<p>Launcher recovery can open the package catalog even when Launcher cannot start. The catalog offers Skip build and Allow build for automatic update selection. Verified Launcher upgrades can open a review after Setup.</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.16-win-x64.exe\">Download Shared Updater Client Setup</a></p>",
+      "<p><a href=\"../\">Shared Updater Client information</a></p>"
+    ]
+  },
+  "shared-updater/1.0.17-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.17",
+    "body": [
+      "<p>Signed Windows x64 development build.</p>",
+      "<p>After a verified Launcher update, the review shows the installation time in Windows local time. <strong>Keep this version</strong> acknowledges the update and closes the review. <strong>Review later</strong> leaves the decision pending.</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.17-win-x64.exe\">Download Shared Updater Client Setup</a></p>",
+      "<p><a href=\"../\">Shared Updater Client information</a></p>"
+    ]
+  },
+  "shared-updater/1.0.18-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.18",
+    "body": [
+      "<p>Signed Windows x64 development build.</p>",
+      "<p>The update notice is bold. Product Setup runs with its console hidden when launched from Updater Client.</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.18-win-x64.exe\">Download Shared Updater Client Setup</a></p>",
+      "<p><a href=\"../\">Shared Updater Client information</a></p>"
+    ]
+  },
+  "shared-updater/1.0.19-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.19",
+    "body": [
+      "<p>Signed Windows x64 development build.</p>",
+      "<p>Product Setup opens without allocating a console when launched from Updater Client.</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.19-win-x64.exe\">Download Shared Updater Client Setup</a></p>",
+      "<p><a href=\"../\">Shared Updater Client information</a></p>"
+    ]
+  },
+  "shared-updater/1.0.20-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.20",
+    "body": [
+      "<p>Signed Windows x64 development build.</p>",
+      "<p>Updater monitors Launcher’s first start after a verified update with Launcher 1.1.0.34 Setup. It displays Launcher’s settings diagnostic when the settings file prevents startup. A slow start offers more time, and an unexpected early exit can offer recovery.</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.20-win-x64.exe\">Download Shared Updater Client Setup</a></p>",
+      "<p><a href=\"../\">Shared Updater Client information</a></p>"
+    ]
+  },
+  "shared-updater/1.0.21-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.21",
+    "body": [
+      "<p>Signed Windows x64 development build.</p>",
+      "<p>When Launcher’s settings prevent startup after a verified update, <strong>Edit</strong> opens the reported file at the TOML error in registered Notepad++. Windows Notepad is available if Notepad++ is absent. After correcting the file, <strong>Start again</strong> retries the failed launch. A successful retry opens the update review.</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.21-win-x64.exe\">Download Shared Updater Client Setup</a></p>",
+      "<p><a href=\"../\">Shared Updater Client information</a></p>"
+    ]
+  },
+  "shared-updater/1.0.22-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.22",
+    "body": [
+      "<p>Signed Windows x64 development build.</p>",
+      "<p>Updater Setup waits for brief review-status checks to finish before starting an in-app upgrade. Updater also distinguishes its own executable from other programs named Updater.exe.</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.22-win-x64.exe\">Download Shared Updater Client Setup</a></p>",
+      "<p><a href=\"../\">Shared Updater Client information</a></p>"
+    ]
+  },
+  "shared-updater/1.0.23-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.23",
+    "body": [
+      "<p>Signed Windows x64 development build.</p>",
+      "<p><strong>Revert</strong> can restore a previously installed Launcher from its exact signed catalog archive, including changed companion files, while preserving your settings. The installation history must record both signed archives.</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.23-win-x64.exe\">Download Shared Updater Client Setup</a></p>",
+      "<p><a href=\"../\">Shared Updater Client information</a></p>"
+    ]
+  },
+  "shared-updater/1.0.24-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.24",
+    "body": [
+      "<p>Signed Windows x64 development build.</p>",
+      "<p>Automatic all-users upgrades show the Setup window before requesting administrator approval. The signed bundle uses the Shared Updater Client Setup name for its elevation handoff.</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.24-win-x64.exe\">Download Shared Updater Client Setup</a></p>",
+      "<p><a href=\"../\">Shared Updater Client information</a></p>"
+    ]
+  },
+  "shared-updater/1.0.25-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.25",
+    "body": [
+      "<p>Signed Windows x64 development build.</p>",
+      "<p>Automatic all-users upgrades show the Setup window before requesting administrator approval. The signed bundle uses the Shared Updater Client Setup name for its elevation handoff.</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.25-win-x64.exe\">Download Shared Updater Client Setup</a></p>",
+      "<p><a href=\"../\">Shared Updater Client information</a></p>"
+    ]
+  },
+  "shared-updater/1.0.27-prerelease/index.html": {
+    "heading": "Shared Updater Client 1.0.27",
+    "body": [
+      "<p>Signed Windows x64 development build.</p>",
+      "<p>When Launcher starts an update, Shared Updater Client Setup shows the Długosz Launcher name and icon and explains why it opened. The window title reads “Shared Updater Client Setup.”</p>",
+      "<p><a href=\"SharedUpdaterClient-Setup-1.0.27-win-x64.exe\">Download Shared Updater Client Setup</a></p>",
+      "<p><a href=\"../\">Shared Updater Client information</a></p>"
+    ]
+  },
+  "shared-updater/index.html": {
+    "heading": "Shared Updater Client",
+    "title": "Shared Updater Client | Długosz",
+    "description": "Install the update checker shared by Launcher and other Długosz apps for Windows.",
+    "body": [
+      "<p class=\"publisher\">Długosz software</p>",
+      "<p>Launcher and other Długosz apps use the same updater to check for new versions. Once installed, it opens when you choose <strong>Check now</strong> in an app’s About window.</p>",
+      "<!-- updater-download -->",
+      "<p><a href=\"/downloads/previous-versions/shared-updater/\">Previous versions and all Shared Updater Client files</a></p>",
+      "<h2>Install and check for updates</h2>",
+      "<ol>",
+      "  <li>Open the downloaded Setup program. Choose <strong>All users</strong> if your app was installed for all users, or <strong>Just me</strong> if it was installed for your Windows account. An upgrade keeps the scope of the existing updater.</li>",
+      "  <li>Setup downloads and installs the Microsoft .NET 10 Desktop Runtime if needed. Windows may ask for administrator approval.</li>",
+      "  <li>When Setup finishes, return to your app’s About window and choose <strong>Check now</strong>.</li>",
+      "</ol>"
+    ]
+  }
+}

@@ -32,4 +32,37 @@ updates.example.invalid {
             }
         }
     }
+    redir /downloads /downloads/ 308
+    redir /downloads/previous-versions /downloads/previous-versions/ 308
+    @download_index path /downloads/ /downloads/index.html /downloads/previous-versions/ /downloads/previous-versions/index.html
+    handle @download_index {
+        root * /srv/www/updater-downloads
+        uri strip_prefix /downloads
+        file_server
+    }
+    handle_path /downloads/previous-versions/launcher/* {
+        root * /srv/www/updater-downloads/launcher
+        file_server browse {
+            index ""
+            hide .*
+        }
+    }
+    handle_path /downloads/previous-versions/shared-updater/* {
+        root * /srv/www/updater-downloads/shared-updater
+        file_server browse {
+            index ""
+            hide .*
+        }
+    }
+    handle_path /downloads/launcher/* {
+        root * /srv/www/updater-downloads/launcher
+        file_server
+    }
+    handle_path /downloads/shared-updater/* {
+        root * /srv/www/updater-downloads/shared-updater
+        file_server
+    }
+    handle {
+        respond 404
+    }
 }

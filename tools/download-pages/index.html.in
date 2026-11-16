@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="${description}">
+  <title>${title}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #fff;
+      --background: #f4f7fb;
+      --ink: #17273a;
+      --blue: #245389;
+      --blue-dark: #193e69;
+      --line: #d6e0ed;
+      font: 1rem/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--ink);
+    }
+
+    main {
+      box-sizing: border-box;
+      max-width: 46rem;
+      margin: clamp(1rem, 5vw, 4rem) auto;
+      padding: clamp(1.25rem, 4vw, 3rem);
+      background: var(--paper);
+      border-top: .25rem solid var(--blue);
+      overflow-wrap: anywhere;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem 1.25rem;
+      padding-bottom: .9rem;
+      border-bottom: 1px solid var(--line);
+      font-size: .9rem;
+    }
+
+    h1, h2, h3 { line-height: 1.2; }
+    h1 { margin: 1.25rem 0 1rem; font-size: clamp(1.75rem, 5vw, 2.5rem); }
+    h2 { margin-top: 2rem; }
+    li + li { margin-top: .5rem; }
+    a { color: var(--blue); text-underline-offset: .15em; }
+    a:hover { color: var(--blue-dark); }
+    a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+
+    .download {
+      display: inline-block;
+      box-sizing: border-box;
+      max-width: 100%;
+      padding: .65rem 1rem;
+      border-radius: .35rem;
+      color: #fff;
+      background: var(--blue);
+      font-weight: 600;
+    }
+
+    .download:hover { color: #fff; background: var(--blue-dark); }
+  </style>
+</head>
+<body>
+  <main>
+    <nav aria-label="Downloads">
+      <a href="/downloads/launcher/">Launcher</a>
+      <a href="/downloads/shared-updater/">Shared Updater Client</a>
+    </nav>
+    <h1>${heading}</h1>
+${content}
+  </main>
+</body>
+</html>
